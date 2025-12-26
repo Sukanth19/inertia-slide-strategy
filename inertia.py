@@ -1,3 +1,4 @@
+# INERTIA
 import tkinter as tk
 from tkinter import messagebox, ttk
 from collections import deque
