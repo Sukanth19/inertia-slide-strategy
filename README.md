@@ -81,5 +81,5 @@ No external libraries required.
 
 ## ▶️ How to Run
 
-```bash
+``` bash
 python inertia.py
