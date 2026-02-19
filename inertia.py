@@ -1,5 +1,4 @@
 
-
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -23,7 +22,7 @@ DOWN_RIGHT = (1, 1)
 ALL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT]
 CARDINAL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
 
-# Rebalanced maps with better difficulty progression
+# Rebalanced maps
 MAPS = {
     "Map 1 - Introduction": {
         "rows": 8,
@@ -92,16 +91,16 @@ MAPS = {
 }
 
 
-# ==================== SUKANT'S MODULE - COMMIT 1/4 ====================
+# ==================== SUKANT'S MODULE - COMMIT 2/4 ====================
 
 class GemDivider:
     """
-    SUKANT - Divide Phase (Commit 1/4)
-    Basic gem extraction from board
+    SUKANT - Divide Phase (Commit 2/4)
+    Added simple two-way clustering by median split
     
     Responsibility:
-    - Extract remaining gems from the game board
-    - Return as frozenset for immutability
+    - Extract remaining gems from board (C1)
+    - Split gems into 2 clusters by median row (C2) ✅ NEW
     """
     
     def __init__(self, game, min_cluster_size=2):
@@ -110,34 +109,81 @@ class GemDivider:
         
         Args:
             game: InertiaGame instance
-            min_cluster_size: Minimum gems per cluster (for future use)
+            min_cluster_size: Minimum gems per cluster before stopping division
         """
         self.game = game
         self.min_cluster_size = min_cluster_size
-        print("[SUKANT C1] ✅ GemDivider initialized - Basic extraction ready")
+        self.clusters_created = 0
+        print("[SUKANT C2] ✅ GemDivider initialized - Clustering enabled")
     
     def get_remaining_gems(self):
         """
         Extract all gems currently on the board.
-        
-        This scans the entire game board and collects positions
-        of all uncollected gems.
         
         Returns:
             frozenset: Set of (row, col) tuples representing gem positions
         """
         gems = set()
         
-        # Scan entire board
         for r in range(self.game.rows):
             for c in range(self.game.cols):
                 if self.game.board[r][c] == GEM:
                     gems.add((r, c))
         
-        print(f"[SUKANT C1] 🔍 Extracted {len(gems)} gems from {self.game.rows}x{self.game.cols} board")
-        
-        # Return as frozenset (immutable, hashable)
+        print(f"[SUKANT C2] 🔍 Extracted {len(gems)} gems from board")
         return frozenset(gems)
+    
+    def divide_gems_into_clusters(self, gems):
+        """
+        NEW (C2): Split gems into 2 clusters by median row.
+        
+        This is a simple two-way split that divides gems horizontally
+        by finding the median row and splitting above/below.
+        
+        Args:
+            gems: Frozenset of gem positions
+        
+        Returns:
+            List of 2 clusters (or 1 if too small)
+        """
+        # Base case: too few gems to split
+        if len(gems) <= self.min_cluster_size:
+            self.clusters_created = 1
+            print(f"[SUKANT C2] ⚠️  Only {len(gems)} gems - keeping single cluster")
+            return [gems]
+        
+        gems_list = list(gems)
+        
+        # Extract all row values
+        rows = [g[0] for g in gems_list]
+        
+        # Find median row
+        median_r = sorted(rows)[len(rows) // 2]
+        
+        # Split by median row (horizontal line)
+        cluster1 = frozenset(g for g in gems_list if g[0] <= median_r)
+        cluster2 = frozenset(g for g in gems_list if g[0] > median_r)
+        
+        self.clusters_created = 2
+        print(f"[SUKANT C2] ✂️  Split {len(gems)} gems → Cluster1: {len(cluster1)} gems, Cluster2: {len(cluster2)} gems")
+        print(f"[SUKANT C2] 📊 Split at row {median_r}")
+        
+        # Return both clusters if valid
+        if cluster1 and cluster2:
+            return [cluster1, cluster2]
+        else:
+            # Edge case: all gems on same row
+            self.clusters_created = 1
+            return [gems]
+    
+    def get_cluster_count(self):
+        """
+        NEW (C2): Return number of clusters created in last division.
+        
+        Returns:
+            int: Number of clusters
+        """
+        return self.clusters_created
 
 
 # ==================== ORIGINAL GAME CODE ====================
@@ -146,8 +192,6 @@ class InertiaGame:
     def __init__(self, map_name="Map 1 - Introduction"):
         self.map_name = map_name
         self.reset()
-        
-        # SUKANT'S ADDITION: Initialize gem divider
         self.gem_divider = GemDivider(self, min_cluster_size=2)
     
     def reset(self):
@@ -159,15 +203,12 @@ class InertiaGame:
         
         self.board = [[EMPTY for _ in range(self.cols)] for _ in range(self.rows)]
         
-        # Place gems
         for r, c in map_data["gems"]:
             self.board[r][c] = GEM
         
-        # Place mines
         for r, c in map_data["mines"]:
             self.board[r][c] = MINE
         
-        # Place stops
         for r, c in map_data["stops"]:
             self.board[r][c] = STOP
         
@@ -181,7 +222,6 @@ class InertiaGame:
         self.cpu_eliminated = False
         self.total_gems = len(map_data["gems"])
         
-        # SUKANT'S ADDITION: Reinitialize divider on reset
         self.gem_divider = GemDivider(self, min_cluster_size=2)
     
     def change_map(self, map_name):
@@ -258,12 +298,19 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        SUKANT'S TEST: Demonstrates gem extraction
+        SUKANT'S TEST: Demonstrates gem clustering (C2)
         TODO: Full AI will be implemented in later commits
         """
-        # Test Sukant's gem extraction
+        # Test Sukant's clustering
         remaining_gems = self.gem_divider.get_remaining_gems()
-        print(f"[CPU AI] 🎯 Target: {len(remaining_gems)} gems")
+        
+        if remaining_gems:
+            clusters = self.gem_divider.divide_gems_into_clusters(remaining_gems)
+            print(f"[CPU AI] 🎯 Targeting {len(clusters)} gem clusters")
+            
+            # Show cluster details
+            for i, cluster in enumerate(clusters):
+                print(f"[CPU AI] 📦 Cluster {i+1}: {list(cluster)[:3]}{'...' if len(cluster) > 3 else ''}")
         
         # Temporary greedy AI (will be replaced)
         best_direction = None
@@ -284,7 +331,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 1/16: Sukant - Gem Extraction]")
+        self.root.title("Inertia [Commit 2/16: Sukant - Two-Way Clustering]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -313,7 +360,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 1/16: Sukant - Basic Gem Extraction ✅",
+            text="Commit 2/16: Sukant - Simple Two-Way Clustering ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -674,7 +721,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Commit 1/16: Sukant's Gem Extraction ✅")
+               f"Commit 2/16: Sukant's Two-Way Clustering ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -703,11 +750,12 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 1/16 - SUKANT: Basic Gem Extraction")
+    print("COMMIT 2/16 - SUKANT: Simple Two-Way Clustering")
     print("=" * 70)
-    print("✅ GemDivider class created")
-    print("✅ get_remaining_gems() implemented")
-    print("📊 Progress: Sukant 1/4 commits")
+    print("✅ divide_gems_into_clusters() implemented")
+    print("✅ Median row-based split")
+    print("✅ get_cluster_count() added")
+    print("📊 Progress: Sukant 2/4 commits")
     print("=" * 70)
     
     root = tk.Tk()
