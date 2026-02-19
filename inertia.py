@@ -1,5 +1,5 @@
-# COMMIT 1.1 - SUKANTH
-# Basic adjacency list graph construction
+# COMMIT 1.2 - SUKANTH
+# Added: GridRegion class for spatial decomposition
 
 import tkinter as tk
 from tkinter import messagebox
@@ -31,13 +31,10 @@ MAPS = {
     }
 }
 
-# ========== SUKANTH 1.1: GRAPH STRUCTURE ==========
+# ========== SUKANTH 1.1: GRAPH STRUCTURE (from previous) ==========
 
 class GraphBuilder:
-    """
-    SUKANTH 1.1: Adjacency list graph construction.
-    Converts grid to graph representation.
-    """
+    """SUKANTH 1.1: Adjacency list graph construction"""
     
     def __init__(self, board, rows, cols):
         self.board = board
@@ -47,10 +44,7 @@ class GraphBuilder:
         self.cell_types = {}
     
     def build_adjacency_list(self):
-        """
-        SUKANTH 1.1: Build adjacency list.
-        Each cell connected to valid neighbors (8 directions).
-        """
+        """Build adjacency list for grid"""
         print(f"[SUKANTH-1.1] Building graph for {self.rows}x{self.cols} grid")
         
         for r in range(self.rows):
@@ -58,26 +52,73 @@ class GraphBuilder:
                 pos = (r, c)
                 self.cell_types[pos] = self.board[r][c]
                 
-                # Skip mines
                 if self.board[r][c] == MINE:
                     continue
                 
                 neighbors = []
-                
-                # Check all 8 directions
                 for dr, dc in ALL_DIRECTIONS:
                     nr, nc = r + dr, c + dc
-                    
                     if (0 <= nr < self.rows and 0 <= nc < self.cols and 
                         self.board[nr][nc] != MINE):
                         neighbors.append((nr, nc))
                 
                 self.graph[pos] = neighbors
         
-        avg_degree = sum(len(v) for v in self.graph.values()) / len(self.graph)
-        print(f"[SUKANTH-1.1] Graph built: {len(self.graph)} nodes, avg degree {avg_degree:.1f}")
-        
+        print(f"[SUKANTH-1.1] Graph built: {len(self.graph)} nodes")
         return self.graph, self.cell_types
+
+
+# ========== SUKANTH 1.2: GRID REGION STRUCTURE ==========
+
+class GridRegion:
+    """
+    SUKANTH 1.2: Represents a rectangular region of the grid.
+    This is the fundamental unit for divide-and-conquer spatial decomposition.
+    
+    Stores:
+    - Boundary coordinates (row_start, row_end, col_start, col_end)
+    - Gems within this region
+    - Size information
+    """
+    
+    def __init__(self, board, row_start, row_end, col_start, col_end, all_gems):
+        self.board = board
+        self.row_start = row_start
+        self.row_end = row_end
+        self.col_start = col_start
+        self.col_end = col_end
+        self.rows = row_end - row_start
+        self.cols = col_end - col_start
+        
+        # SUKANTH 1.2: Extract gems that fall within this region
+        self.gems = self._extract_gems(all_gems)
+        
+        print(f"[SUKANTH-1.2] Region created: [{row_start}:{row_end}, {col_start}:{col_end}] "
+              f"size={self.rows}x{self.cols}, gems={len(self.gems)}")
+    
+    def _extract_gems(self, all_gems):
+        """
+        SUKANTH 1.2: Filter gems that belong to this region.
+        Critical for divide-and-conquer: each subproblem only sees its gems.
+        """
+        region_gems = set()
+        for r, c in all_gems:
+            if self.row_start <= r < self.row_end and self.col_start <= c < self.col_end:
+                region_gems.add((r, c))
+        return region_gems
+    
+    def size(self):
+        """SUKANTH 1.2: Total cells in region"""
+        return self.rows * self.cols
+    
+    def contains(self, pos):
+        """SUKANTH 1.2: Check if position is inside region"""
+        r, c = pos
+        return (self.row_start <= r < self.row_end and 
+                self.col_start <= c < self.col_end)
+    
+    def __repr__(self):
+        return f"GridRegion({self.rows}x{self.cols}, {len(self.gems)} gems)"
 
 
 class InertiaGame:
@@ -86,6 +127,7 @@ class InertiaGame:
         self.graph_builder = None
         self.graph = {}
         self.cell_types = {}
+        self.root_region = None  # NEW: Will hold the full grid region
         self.reset()
     
     def reset(self):
@@ -107,6 +149,10 @@ class InertiaGame:
         # SUKANTH 1.1: Build graph
         self.graph_builder = GraphBuilder(self.board, self.rows, self.cols)
         self.graph, self.cell_types = self.graph_builder.build_adjacency_list()
+        
+        # SUKANTH 1.2: Create root region (entire grid)
+        all_gems = set(map_data["gems"])
+        self.root_region = GridRegion(self.board, 0, self.rows, 0, self.cols, all_gems)
     
     def simulate_move(self, direction):
         dr, dc = direction
@@ -187,7 +233,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("INERTIA [C1.1: Sukanth-Graph]")
+        self.root.title("INERTIA [C1.2: Sukanth-GridRegion]")
         
         self.colors = {
             'bg_darkest': '#0d0221', 'bg_dark': '#1a0b2e', 'bg_medium': '#2d1b4e',
@@ -223,7 +269,7 @@ class InertiaGUI:
         tk.Label(title_inner, text="⬢  I N E R T I A  ⬢", font=("Helvetica", 42, "bold"),
                 fg=self.colors['accent_cyan'], bg=self.colors['bg_dark']).pack()
         
-        tk.Label(title_inner, text="C1.1: SUKANTH - Graph Structure",
+        tk.Label(title_inner, text="C1.2: SUKANTH - Grid Region Structure",
                 font=("Courier", 11, "bold"), fg=self.colors['accent_purple'], bg=self.colors['bg_dark']).pack(pady=(8, 0))
         
         map_outer = tk.Frame(main, bg=self.colors['accent_cyan'], padx=2, pady=2)
