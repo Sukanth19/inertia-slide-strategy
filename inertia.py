@@ -22,7 +22,7 @@ DOWN_RIGHT = (1, 1)
 ALL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT]
 CARDINAL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
 
-# Rebalanced maps
+# Maps
 MAPS = {
     "Map 1 - Introduction": {
         "rows": 8,
@@ -91,137 +91,192 @@ MAPS = {
 }
 
 
-# ==================== SUKANT'S MODULE - COMMIT 3/4 ====================
+# ==================== SUKANT'S MODULE - COMPLETE ✅ ====================
 
 class GemDivider:
-    """
-    SUKANT - Divide Phase (Commit 3/4)
-    Added recursive division for multi-level clustering
-    
-    Responsibility:
-    - Extract remaining gems from board (C1)
-    - Split gems into clusters by median row (C2)
-    - Recursively divide clusters (C3) ✅ NEW
-    """
+    """SUKANT - Divide Phase ✅ COMPLETE"""
     
     def __init__(self, game, min_cluster_size=2):
-        """
-        Initialize the Gem Divider.
-        
-        Args:
-            game: InertiaGame instance
-            min_cluster_size: Minimum gems per cluster before stopping division
-        """
         self.game = game
         self.min_cluster_size = min_cluster_size
         self.clusters_created = 0
-        print("[SUKANT C3] ✅ GemDivider initialized - Recursive division enabled")
     
     def get_remaining_gems(self):
-        """
-        Extract all gems currently on the board.
-        
-        Returns:
-            frozenset: Set of (row, col) tuples representing gem positions
-        """
         gems = set()
-        
         for r in range(self.game.rows):
             for c in range(self.game.cols):
                 if self.game.board[r][c] == GEM:
                     gems.add((r, c))
-        
-        print(f"[SUKANT C3] 🔍 Extracted {len(gems)} gems from board")
         return frozenset(gems)
     
     def divide_gems_into_clusters(self, gems):
-        """
-        UPDATED (C3): Recursively divide gems into multiple clusters.
-        
-        This now uses recursive division to create a hierarchical
-        clustering of gems, splitting until clusters are small enough.
-        
-        Args:
-            gems: Frozenset of gem positions
-        
-        Returns:
-            List of clusters (can be more than 2)
-        """
         self.clusters_created = 0
         clusters = self._recursive_divide(gems, depth=0)
-        print(f"[SUKANT C3] 🌳 Recursively created {self.clusters_created} clusters from hierarchical division")
         return clusters
     
     def _recursive_divide(self, gems, depth):
-        """
-        NEW (C3): Recursively divide gems into clusters.
-        
-        This implements the core recursive algorithm:
-        1. Base case: If cluster is too small or depth too deep, stop
-        2. Otherwise: Split into 2 sub-clusters by median row
-        3. Recursively divide each sub-cluster
-        4. Return all resulting clusters
-        
-        Args:
-            gems: Frozenset of gems to divide
-            depth: Current recursion depth
-        
-        Returns:
-            List of clusters from recursive division
-        """
-        print(f"[SUKANT C3] 🔄 Recursive call at depth {depth} with {len(gems)} gems")
-        
-        # Base case: too small or too deep
         if len(gems) <= self.min_cluster_size or depth > 3:
             if len(gems) > 0:
                 self.clusters_created += 1
-                print(f"[SUKANT C3] 🛑 Base case reached - Created cluster #{self.clusters_created} with {len(gems)} gems")
             return [gems] if len(gems) > 0 else []
         
         gems_list = list(gems)
-        
-        # Extract all row values
         rows = [g[0] for g in gems_list]
+        cols = [g[1] for g in gems_list]
         
-        # Find median row
-        median_r = sorted(rows)[len(rows) // 2]
+        r_variance = self._calculate_variance(rows)
+        c_variance = self._calculate_variance(cols)
         
-        # Split by median row (horizontal line)
-        cluster1 = frozenset(g for g in gems_list if g[0] <= median_r)
-        cluster2 = frozenset(g for g in gems_list if g[0] > median_r)
+        if r_variance >= c_variance:
+            cluster1, cluster2 = self._split_by_rows(gems_list, rows)
+        else:
+            cluster1, cluster2 = self._split_by_cols(gems_list, cols)
         
-        print(f"[SUKANT C3] ✂️  Depth {depth}: Split {len(gems)} gems → {len(cluster1)} + {len(cluster2)}")
-        
-        # Recursively divide each cluster
         result_clusters = []
-        
         if cluster1:
-            print(f"[SUKANT C3] ⬇️  Recursing into cluster1 (upper half)")
             result_clusters.extend(self._recursive_divide(cluster1, depth + 1))
-        
         if cluster2:
-            print(f"[SUKANT C3] ⬇️  Recursing into cluster2 (lower half)")
             result_clusters.extend(self._recursive_divide(cluster2, depth + 1))
         
         return result_clusters if result_clusters else [gems]
     
+    def _calculate_variance(self, values):
+        if not values:
+            return 0
+        return max(values) - min(values)
+    
+    def _split_by_rows(self, gems_list, rows):
+        median_r = sorted(rows)[len(rows) // 2]
+        cluster1 = frozenset(g for g in gems_list if g[0] <= median_r)
+        cluster2 = frozenset(g for g in gems_list if g[0] > median_r)
+        return cluster1, cluster2
+    
+    def _split_by_cols(self, gems_list, cols):
+        median_c = sorted(cols)[len(cols) // 2]
+        cluster1 = frozenset(g for g in gems_list if g[1] <= median_c)
+        cluster2 = frozenset(g for g in gems_list if g[1] > median_c)
+        return cluster1, cluster2
+    
     def get_cluster_count(self):
-        """
-        Return number of clusters created in last division.
-        
-        Returns:
-            int: Number of clusters
-        """
         return self.clusters_created
 
 
-# ==================== ORIGINAL GAME CODE ====================
+# ==================== NIKHIL'S MODULE - COMMIT 1/5 ====================
+
+class ClusterConqueror:
+    """
+    NIKHIL - Conquer Phase (Commit 1/5)
+    Basic move simulation structure
+    
+    Responsibility:
+    - Simulate moves from any position (C1) ✅ NEW
+    - Handle continuous sliding mechanics
+    - Track path traversal
+    
+    TODO (next commits):
+    - Boundary detection (C2)
+    - Gem collection (C3)
+    - 8-direction support (C4)
+    - Fallback strategies (C5)
+    """
+    
+    def __init__(self, game):
+        """
+        Initialize the Cluster Conqueror.
+        
+        Args:
+            game: InertiaGame instance
+        """
+        self.game = game
+        
+        # Direction constants
+        self.UP = (-1, 0)
+        self.DOWN = (1, 0)
+        self.LEFT = (0, -1)
+        self.RIGHT = (0, 1)
+        self.UP_LEFT = (-1, -1)
+        self.UP_RIGHT = (-1, 1)
+        self.DOWN_LEFT = (1, -1)
+        self.DOWN_RIGHT = (1, 1)
+        
+        self.ALL_DIRECTIONS = [
+            self.UP, self.DOWN, self.LEFT, self.RIGHT,
+            self.UP_LEFT, self.UP_RIGHT, self.DOWN_LEFT, self.DOWN_RIGHT
+        ]
+        
+        print("[NIKHIL C1] ✅ ClusterConqueror initialized - Basic simulation ready")
+    
+    def simulate_move(self, start_pos, direction, already_collected):
+        """
+        NEW (C1): Basic move simulation structure.
+        
+        Simulates a slide movement from start_pos in given direction.
+        The ball slides continuously until it hits an obstacle.
+        
+        Args:
+            start_pos: Starting position (r, c)
+            direction: Direction tuple (dr, dc)
+            already_collected: Frozenset of gem positions already collected
+        
+        Returns:
+            Tuple of (end_pos, gems_collected_set, hit_mine, path)
+        """
+        print(f"[NIKHIL C1] 🎯 Simulating move from {start_pos} in direction {direction}")
+        
+        dr, dc = direction
+        r, c = start_pos
+        gems_on_path = set()
+        path = [(r, c)]
+        hit_mine = False
+        
+        # TODO (C2): Add boundary detection
+        # TODO (C3): Add gem collection logic
+        # TODO (C4): Ensure all 8 directions work properly
+        
+        # Basic sliding loop (placeholder - will be enhanced in C2)
+        steps = 0
+        while steps < 1:  # Temporary: only one step for now
+            next_r, next_c = r + dr, c + dc
+            
+            # Simple boundary check (will be enhanced in C2)
+            if next_r < 0 or next_r >= self.game.rows or next_c < 0 or next_c >= self.game.cols:
+                print(f"[NIKHIL C1] 🛑 Would hit boundary at ({next_r}, {next_c})")
+                break
+            
+            r, c = next_r, next_c
+            path.append((r, c))
+            steps += 1
+            
+            # Placeholder for obstacle detection (will be added in C2)
+            break
+        
+        end_pos = (r, c)
+        print(f"[NIKHIL C1] ✅ Move complete: {start_pos} → {end_pos}, path length: {len(path)}")
+        
+        return end_pos, frozenset(gems_on_path), hit_mine, path
+    
+    def get_all_directions(self):
+        """
+        Get all 8 possible directions.
+        
+        Returns:
+            List of direction tuples
+        """
+        return self.ALL_DIRECTIONS
+
+
+# ==================== GAME CODE ====================
 
 class InertiaGame:
     def __init__(self, map_name="Map 1 - Introduction"):
         self.map_name = map_name
         self.reset()
+        
+        # Sukant's module
         self.gem_divider = GemDivider(self, min_cluster_size=2)
+        
+        # NIKHIL'S ADDITION: Initialize cluster conqueror
+        self.cluster_conqueror = ClusterConqueror(self)
     
     def reset(self):
         """Reset game to initial state"""
@@ -252,6 +307,7 @@ class InertiaGame:
         self.total_gems = len(map_data["gems"])
         
         self.gem_divider = GemDivider(self, min_cluster_size=2)
+        self.cluster_conqueror = ClusterConqueror(self)
     
     def change_map(self, map_name):
         """Change to different map"""
@@ -259,7 +315,7 @@ class InertiaGame:
         self.reset()
     
     def simulate_move(self, direction):
-        """Simulate a slide in given direction from current position."""
+        """Original simulate_move (for game mechanics)"""
         dr, dc = direction
         r, c = self.ball_pos
         gems = 0
@@ -327,22 +383,19 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        SUKANT'S TEST: Demonstrates recursive clustering (C3)
-        TODO: Full AI will be implemented in later commits
+        NIKHIL'S TEST (C1): Test basic simulation structure
+        TODO: Full integration in later commits
         """
-        # Test Sukant's recursive clustering
-        remaining_gems = self.gem_divider.get_remaining_gems()
+        # Test Nikhil's basic simulation
+        print(f"\n{'='*70}")
+        print("[CPU AI] Testing Nikhil's ClusterConqueror (C1)")
         
-        if remaining_gems:
-            print(f"\n{'='*60}")
-            clusters = self.gem_divider.divide_gems_into_clusters(remaining_gems)
-            print(f"{'='*60}\n")
-            print(f"[CPU AI] 🎯 Result: {len(clusters)} clusters created via recursive division")
-            
-            # Show cluster summary
-            for i, cluster in enumerate(clusters):
-                cluster_list = list(cluster)
-                print(f"[CPU AI] 📦 Cluster {i+1}: Size={len(cluster)}, Gems={cluster_list[:2]}{'...' if len(cluster) > 2 else ''}")
+        test_direction = RIGHT
+        end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
+            self.ball_pos, test_direction, frozenset()
+        )
+        print(f"[CPU AI] Test result: Moved from {self.ball_pos} to {end_pos}")
+        print(f"{'='*70}\n")
         
         # Temporary greedy AI (will be replaced)
         best_direction = None
@@ -363,7 +416,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 3/16: Sukant - Recursive Division]")
+        self.root.title("Inertia [Commit 5/16: Nikhil - Basic Simulation]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -377,7 +430,7 @@ class InertiaGUI:
         self.draw_board()
     
     def _create_widgets(self):
-        """Create UI widgets with modern styling"""
+        """Create UI widgets"""
         title_frame = tk.Frame(self.root, bg="#16213e", pady=15)
         title_frame.pack(fill=tk.X)
         
@@ -392,7 +445,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 3/16: Sukant - Recursive Division ✅",
+            text="Commit 5/16: Nikhil - Basic Move Simulation (1/5) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -429,8 +482,6 @@ class InertiaGUI:
             font=("Arial", 11, "bold"),
             bg="#4CAF50",
             fg="white",
-            activebackground="#45a049",
-            activeforeground="white",
             relief=tk.FLAT,
             padx=20,
             pady=8,
@@ -445,8 +496,6 @@ class InertiaGUI:
             font=("Arial", 11, "bold"),
             bg="#e94560",
             fg="white",
-            activebackground="#c23550",
-            activeforeground="white",
             relief=tk.FLAT,
             padx=20,
             pady=8,
@@ -485,8 +534,7 @@ class InertiaGUI:
             ("🎮 Controls:", "#00d4ff", "bold"),
             ("Arrow Keys / WASD", "#ffffff", "normal"),
             ("or", "#a8dadc", "normal"),
-            ("Click Mouse", "#ffffff", "normal"),
-            ("(8 Directions!)", "#00d4ff", "normal")
+            ("Click Mouse", "#ffffff", "normal")
         ]
         
         for text, color, weight in instructions:
@@ -753,7 +801,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Commit 3/16: Sukant's Recursive Division ✅")
+               f"Nikhil's Module: 1/5 commits ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -782,12 +830,15 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 3/16 - SUKANT: Recursive Division")
+    print("COMMIT 5/16 - NIKHIL: Basic Move Simulation Structure")
     print("=" * 70)
-    print("✅ _recursive_divide() implemented")
-    print("✅ Depth limiting (max depth 3)")
-    print("✅ Multi-level hierarchical clustering")
-    print("📊 Progress: Sukant 3/4 commits")
+    print("✅ ClusterConqueror class created")
+    print("✅ simulate_move() skeleton implemented")
+    print("✅ Basic path tracking added")
+    print("✅ ALL_DIRECTIONS defined")
+    print("📊 Progress: Nikhil 1/5 commits")
+    print("📊 Total Progress: 5/16 commits")
+    print("⏭️  Next: Boundary & obstacle detection (C2)")
     print("=" * 70)
     
     root = tk.Tk()
