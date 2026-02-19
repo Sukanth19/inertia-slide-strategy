@@ -1,5 +1,4 @@
 
-
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -162,21 +161,20 @@ class GemDivider:
         return self.clusters_created
 
 
-# ==================== NIKHIL'S MODULE - COMMIT 2/5 ====================
+# ==================== NIKHIL'S MODULE - COMMIT 3/5 ====================
 
 class ClusterConqueror:
     """
-    NIKHIL - Conquer Phase (Commit 2/5)
-    Complete boundary and obstacle detection
+    NIKHIL - Conquer Phase (Commit 3/5)
+    Complete gem collection mechanics
     
     Responsibility:
     - Simulate moves from any position (C1) ✅
-    - Full boundary detection (C2) ✅ NEW
-    - Obstacle detection: MINE, STOP (C2) ✅ NEW
-    - Continuous sliding mechanics (C2) ✅ NEW
+    - Boundary & obstacle detection (C2) ✅
+    - Gem collection along path (C3) ✅ NEW
+    - Track already collected gems (C3) ✅ NEW
     
     TODO (next commits):
-    - Gem collection (C3)
     - 8-direction validation (C4)
     - Fallback strategies (C5)
     """
@@ -205,16 +203,16 @@ class ClusterConqueror:
             self.UP_LEFT, self.UP_RIGHT, self.DOWN_LEFT, self.DOWN_RIGHT
         ]
         
-        print("[NIKHIL C2] ✅ ClusterConqueror initialized - Boundary & obstacle detection ready")
+        print("[NIKHIL C3] ✅ ClusterConqueror initialized - Gem collection enabled")
     
     def simulate_move(self, start_pos, direction, already_collected):
         """
-        UPDATED (C2): Complete boundary and obstacle detection.
+        UPDATED (C3): Now collects gems along the slide path.
         
-        Simulates continuous sliding until hitting:
-        - Grid boundary
-        - MINE tile (sets hit_mine=True)
-        - STOP tile
+        Simulates continuous sliding with full gem collection:
+        - Detects gems on path
+        - Only collects gems NOT in already_collected
+        - Returns frozenset of newly collected gems
         
         Args:
             start_pos: Starting position (r, c)
@@ -224,57 +222,67 @@ class ClusterConqueror:
         Returns:
             Tuple of (end_pos, gems_collected_set, hit_mine, path)
         """
-        print(f"[NIKHIL C2] 🎯 Simulating slide from {start_pos} direction {direction}")
+        print(f"[NIKHIL C3] 🎯 Simulating slide from {start_pos} direction {direction}")
+        print(f"[NIKHIL C3] 📦 Already collected: {len(already_collected)} gems")
         
         dr, dc = direction
         r, c = start_pos
-        gems_on_path = set()
+        gems_on_path = set()  # NEW (C3): Track collected gems
         path = [(r, c)]
         hit_mine = False
         
-        # NEW (C2): Continuous sliding loop
+        # Continuous sliding loop
         while True:
             next_r, next_c = r + dr, c + dc
             
-            # NEW (C2): Complete boundary check
+            # Boundary check
             if not self._is_in_bounds(next_r, next_c):
-                print(f"[NIKHIL C2] 🛑 Hit boundary at ({next_r}, {next_c})")
+                print(f"[NIKHIL C3] 🛑 Hit boundary")
                 break
             
             # Move to next position
             r, c = next_r, next_c
             path.append((r, c))
             
-            # NEW (C2): Get cell type and handle obstacles
+            # Get cell type and handle obstacles
             cell_type = self.game.board[r][c]
             
             if cell_type == GEM:
-                # TODO (C3): Will add gem collection logic
-                print(f"[NIKHIL C2] 💎 Found gem at ({r}, {c}) - collection pending (C3)")
-                # Continue sliding for now
+                # NEW (C3): Collect gem if not already collected
+                if (r, c) not in already_collected:
+                    gems_on_path.add((r, c))
+                    print(f"[NIKHIL C3] 💎 Collected gem at ({r}, {c})")
+                else:
+                    print(f"[NIKHIL C3] ⚪ Skipped already collected gem at ({r}, {c})")
+                
+                # Continue sliding (gems don't stop movement)
                 
             elif cell_type == MINE:
-                # NEW (C2): Hit mine - invalid move
-                print(f"[NIKHIL C2] 💥 Hit MINE at ({r}, {c})")
+                # Hit mine - invalid move
+                print(f"[NIKHIL C3] 💥 Hit MINE at ({r}, {c})")
                 hit_mine = True
                 break
                 
             elif cell_type == STOP:
-                # NEW (C2): Hit stop tile - halt movement
-                print(f"[NIKHIL C2] 🛑 Hit STOP tile at ({r}, {c})")
+                # Hit stop tile - halt movement
+                print(f"[NIKHIL C3] 🛑 Hit STOP tile at ({r}, {c})")
                 break
             
             # EMPTY cell - continue sliding
         
         end_pos = (r, c)
-        print(f"[NIKHIL C2] ✅ Slide complete: {start_pos} → {end_pos}")
-        print(f"[NIKHIL C2] 📊 Path length: {len(path)}, Hit mine: {hit_mine}")
         
-        return end_pos, frozenset(gems_on_path), hit_mine, path
+        # NEW (C3): Convert to frozenset for immutability
+        gems_collected = frozenset(gems_on_path)
+        
+        print(f"[NIKHIL C3] ✅ Slide complete: {start_pos} → {end_pos}")
+        print(f"[NIKHIL C3] 📊 Collected {len(gems_collected)} new gems, Path: {len(path)} steps, Hit mine: {hit_mine}")
+        
+        return end_pos, gems_collected, hit_mine, path
     
     def _is_in_bounds(self, r, c):
         """
-        NEW (C2): Check if position is within grid boundaries.
+        Check if position is within grid boundaries.
         
         Args:
             r: Row coordinate
@@ -413,20 +421,29 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        NIKHIL'S TEST (C2): Test boundary and obstacle detection
+        NIKHIL'S TEST (C3): Test gem collection mechanics
         TODO: Full integration in later commits
         """
-        # Test Nikhil's enhanced simulation with obstacles
+        # Test Nikhil's gem collection
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Nikhil's ClusterConqueror (C2)")
+        print("[CPU AI] Testing Nikhil's ClusterConqueror (C3) - Gem Collection")
         
-        # Test multiple directions
-        for test_direction in [RIGHT, DOWN, UP_RIGHT]:
-            print(f"\n[CPU AI] Testing direction: {test_direction}")
+        # Test with no collected gems
+        print("\n[CPU AI] Test 1: Fresh simulation (no collected gems)")
+        for test_direction in [RIGHT, DOWN]:
+            print(f"\n[CPU AI] Direction: {test_direction}")
             end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
                 self.ball_pos, test_direction, frozenset()
             )
-            print(f"[CPU AI] Result: {self.ball_pos} → {end_pos}, Mine: {hit_mine}, Path: {len(path)} steps")
+            print(f"[CPU AI] Result: {len(gems)} gems collected")
+        
+        # Test with some gems already collected
+        print("\n[CPU AI] Test 2: With already collected gems")
+        already_collected = frozenset([(3, 3)])  # Pretend we already collected this gem
+        end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
+            self.ball_pos, RIGHT, already_collected
+        )
+        print(f"[CPU AI] Result: {len(gems)} NEW gems collected (skipped already collected)")
         
         print(f"{'='*70}\n")
         
@@ -449,7 +466,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 6/16: Nikhil - Boundary Detection]")
+        self.root.title("Inertia [Commit 7/16: Nikhil - Gem Collection]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -478,7 +495,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 6/16: Nikhil - Boundary & Obstacle Detection (2/5) ✅",
+            text="Commit 7/16: Nikhil - Gem Collection Mechanics (3/5) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -834,7 +851,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Nikhil's Module: 2/5 commits ✅")
+               f"Nikhil's Module: 3/5 commits ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -863,16 +880,16 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 6/16 - NIKHIL: Boundary & Obstacle Detection")
+    print("COMMIT 7/16 - NIKHIL: Gem Collection Mechanics")
     print("=" * 70)
-    print("✅ Full boundary checking implemented")
-    print("✅ MINE detection added (hit_mine flag)")
-    print("✅ STOP tile detection added")
-    print("✅ Continuous sliding loop")
-    print("✅ _is_in_bounds() helper method")
-    print("📊 Progress: Nikhil 2/5 commits")
-    print("📊 Total Progress: 6/16 commits")
-    print("⏭️  Next: Gem collection mechanics (C3)")
+    print("✅ Gem detection along slide path")
+    print("✅ already_collected parameter handling")
+    print("✅ Only collects NEW gems (not in already_collected)")
+    print("✅ Returns frozenset of collected gems")
+    print("✅ Proper tracking through entire path")
+    print("📊 Progress: Nikhil 3/5 commits")
+    print("📊 Total Progress: 7/16 commits")
+    print("⏭️  Next: 8-direction validation (C4)")
     print("=" * 70)
     
     root = tk.Tk()
