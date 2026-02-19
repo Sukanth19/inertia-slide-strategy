@@ -1,5 +1,3 @@
-
-
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -95,10 +93,6 @@ MAPS = {
 # ==================== SUKANT'S MODULE ✅ COMPLETE ====================
 
 class GemDivider:
-    """
-    SUKANT - Divide Phase (Commits 1-4) ✅ COMPLETE
-    Variance-based recursive gem clustering using divide-and-conquer
-    """
     
     def __init__(self, game, min_cluster_size=2):
         self.game = game
@@ -175,10 +169,6 @@ class GemDivider:
 # ==================== NIKHIL'S MODULE ✅ COMPLETE ====================
 
 class ClusterConqueror:
-    """
-    NIKHIL - Conquer Phase (Commits 5-9) ✅ COMPLETE
-    Complete move simulation with 8-direction support and fallback strategies
-    """
     
     def __init__(self, game):
         self.game = game
@@ -323,10 +313,6 @@ class ClusterConqueror:
 # ==================== DHIRJA'S MODULE ✅ COMPLETE ====================
 
 class DPStateManager:
-    """
-    DHIRJA - DP State Management (Commits 10-13) ✅ COMPLETE
-    Complete memoization and state management for dynamic programming
-    """
     
     def __init__(self):
         self.memo = {}
@@ -470,12 +456,7 @@ class DPStateManager:
 # ==================== BADRI'S MODULE ✅ COMPLETE ====================
 
 class RecursiveSolver:
-    """
-    BADRI - Recursive DP Solver (Commits 14-16) ✅ COMPLETE
-    Complete recursive solving with cluster optimization and full integration
-    
-    🎉 THIS IS THE FINAL MODULE THAT BRINGS EVERYTHING TOGETHER! 🎉
-    """
+
     
     def __init__(self, game, gem_divider, cluster_conqueror, dp_state_manager, max_depth=3):
         """
@@ -796,7 +777,6 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="🎉 COMMIT 16/16: FINAL COMPLETE VERSION 🏆",
             font=("Arial", 10, "bold"),
             fg="#FFD700",
             bg="#16213e"
@@ -805,7 +785,6 @@ class InertiaGUI:
         
         subtitle2 = tk.Label(
             title_frame,
-            text="All 4 Modules Integrated: Divide-and-Conquer + Dynamic Programming",
             font=("Arial", 9),
             fg="#a8dadc",
             bg="#16213e"
@@ -1162,11 +1141,6 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"🎉🏆 PROJECT COMPLETE: 16/16 COMMITS! 🏆🎉\n\n"
-               f"✅ Sukant's Divide (C1-C4)\n"
-               f"✅ Nikhil's Conquer (C5-C9)\n"
-               f"✅ Dhirja's DP (C10-C13)\n"
-               f"✅ Badri's Integration (C14-C16)\n\n"
                f"Thank you for playing!")
         
         messagebox.showinfo("Game Over", msg)
@@ -1197,53 +1171,6 @@ class InertiaGUI:
 # ==================== MAIN ====================
 
 def main():
-    """
-    🎉🎉🎉 FINAL MAIN FUNCTION 🎉🎉🎉
-    
-    This is it - the complete game with all 16 commits integrated!
-    """
-    print("=" * 70)
-    print("🎉🏆 COMMIT 16/16 - FINAL COMPLETE VERSION 🏆🎉")
-    print("=" * 70)
-    print()
-    print("✅ ALL 4 MODULES COMPLETE:")
-    print("   1. Sukant's GemDivider (Commits 1-4)")
-    print("      - Variance-based recursive clustering")
-    print("      - Smart dimension selection")
-    print()
-    print("   2. Nikhil's ClusterConqueror (Commits 5-9)")
-    print("      - 8-direction move simulation")
-    print("      - Complete boundary & obstacle detection")
-    print("      - Gem collection mechanics")
-    print("      - Fallback strategies")
-    print()
-    print("   3. Dhirja's DPStateManager (Commits 10-13)")
-    print("      - State creation & validation")
-    print("      - Memoization table operations")
-    print("      - State statistics & analysis")
-    print("      - Advanced state utilities")
-    print()
-    print("   4. Badri's RecursiveSolver (Commits 14-16)")
-    print("      - Recursive solver foundation")
-    print("      - Cluster-based optimization")
-    print("      - Complete integration")
-    print()
-    print("🎮 FEATURES:")
-    print("   ✅ Smart AI using Divide-and-Conquer + Dynamic Programming")
-    print("   ✅ 8-direction movement (including diagonals)")
-    print("   ✅ 8 challenging maps")
-    print("   ✅ Beautiful UI")
-    print("   ✅ Full keyboard & mouse support")
-    print("   ✅ Comprehensive memoization")
-    print("   ✅ Cluster-based optimization")
-    print()
-    print("🏆 PROJECT STATUS: 100% COMPLETE (16/16 commits)")
-    print()
-    print("=" * 70)
-    print()
-    print("Starting game...")
-    print()
-    
     root = tk.Tk()
     app = InertiaGUI(root)
     root.mainloop()
