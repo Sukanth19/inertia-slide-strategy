@@ -1,4 +1,5 @@
 
+
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -161,22 +162,22 @@ class GemDivider:
         return self.clusters_created
 
 
-# ==================== NIKHIL'S MODULE - COMMIT 1/5 ====================
+# ==================== NIKHIL'S MODULE - COMMIT 2/5 ====================
 
 class ClusterConqueror:
     """
-    NIKHIL - Conquer Phase (Commit 1/5)
-    Basic move simulation structure
+    NIKHIL - Conquer Phase (Commit 2/5)
+    Complete boundary and obstacle detection
     
     Responsibility:
-    - Simulate moves from any position (C1) ✅ NEW
-    - Handle continuous sliding mechanics
-    - Track path traversal
+    - Simulate moves from any position (C1) ✅
+    - Full boundary detection (C2) ✅ NEW
+    - Obstacle detection: MINE, STOP (C2) ✅ NEW
+    - Continuous sliding mechanics (C2) ✅ NEW
     
     TODO (next commits):
-    - Boundary detection (C2)
     - Gem collection (C3)
-    - 8-direction support (C4)
+    - 8-direction validation (C4)
     - Fallback strategies (C5)
     """
     
@@ -204,14 +205,16 @@ class ClusterConqueror:
             self.UP_LEFT, self.UP_RIGHT, self.DOWN_LEFT, self.DOWN_RIGHT
         ]
         
-        print("[NIKHIL C1] ✅ ClusterConqueror initialized - Basic simulation ready")
+        print("[NIKHIL C2] ✅ ClusterConqueror initialized - Boundary & obstacle detection ready")
     
     def simulate_move(self, start_pos, direction, already_collected):
         """
-        NEW (C1): Basic move simulation structure.
+        UPDATED (C2): Complete boundary and obstacle detection.
         
-        Simulates a slide movement from start_pos in given direction.
-        The ball slides continuously until it hits an obstacle.
+        Simulates continuous sliding until hitting:
+        - Grid boundary
+        - MINE tile (sets hit_mine=True)
+        - STOP tile
         
         Args:
             start_pos: Starting position (r, c)
@@ -221,7 +224,7 @@ class ClusterConqueror:
         Returns:
             Tuple of (end_pos, gems_collected_set, hit_mine, path)
         """
-        print(f"[NIKHIL C1] 🎯 Simulating move from {start_pos} in direction {direction}")
+        print(f"[NIKHIL C2] 🎯 Simulating slide from {start_pos} direction {direction}")
         
         dr, dc = direction
         r, c = start_pos
@@ -229,31 +232,58 @@ class ClusterConqueror:
         path = [(r, c)]
         hit_mine = False
         
-        # TODO (C2): Add boundary detection
-        # TODO (C3): Add gem collection logic
-        # TODO (C4): Ensure all 8 directions work properly
-        
-        # Basic sliding loop (placeholder - will be enhanced in C2)
-        steps = 0
-        while steps < 1:  # Temporary: only one step for now
+        # NEW (C2): Continuous sliding loop
+        while True:
             next_r, next_c = r + dr, c + dc
             
-            # Simple boundary check (will be enhanced in C2)
-            if next_r < 0 or next_r >= self.game.rows or next_c < 0 or next_c >= self.game.cols:
-                print(f"[NIKHIL C1] 🛑 Would hit boundary at ({next_r}, {next_c})")
+            # NEW (C2): Complete boundary check
+            if not self._is_in_bounds(next_r, next_c):
+                print(f"[NIKHIL C2] 🛑 Hit boundary at ({next_r}, {next_c})")
                 break
             
+            # Move to next position
             r, c = next_r, next_c
             path.append((r, c))
-            steps += 1
             
-            # Placeholder for obstacle detection (will be added in C2)
-            break
+            # NEW (C2): Get cell type and handle obstacles
+            cell_type = self.game.board[r][c]
+            
+            if cell_type == GEM:
+                # TODO (C3): Will add gem collection logic
+                print(f"[NIKHIL C2] 💎 Found gem at ({r}, {c}) - collection pending (C3)")
+                # Continue sliding for now
+                
+            elif cell_type == MINE:
+                # NEW (C2): Hit mine - invalid move
+                print(f"[NIKHIL C2] 💥 Hit MINE at ({r}, {c})")
+                hit_mine = True
+                break
+                
+            elif cell_type == STOP:
+                # NEW (C2): Hit stop tile - halt movement
+                print(f"[NIKHIL C2] 🛑 Hit STOP tile at ({r}, {c})")
+                break
+            
+            # EMPTY cell - continue sliding
         
         end_pos = (r, c)
-        print(f"[NIKHIL C1] ✅ Move complete: {start_pos} → {end_pos}, path length: {len(path)}")
+        print(f"[NIKHIL C2] ✅ Slide complete: {start_pos} → {end_pos}")
+        print(f"[NIKHIL C2] 📊 Path length: {len(path)}, Hit mine: {hit_mine}")
         
         return end_pos, frozenset(gems_on_path), hit_mine, path
+    
+    def _is_in_bounds(self, r, c):
+        """
+        NEW (C2): Check if position is within grid boundaries.
+        
+        Args:
+            r: Row coordinate
+            c: Column coordinate
+        
+        Returns:
+            bool: True if position is valid, False otherwise
+        """
+        return 0 <= r < self.game.rows and 0 <= c < self.game.cols
     
     def get_all_directions(self):
         """
@@ -275,7 +305,7 @@ class InertiaGame:
         # Sukant's module
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         
-        # NIKHIL'S ADDITION: Initialize cluster conqueror
+        # Nikhil's module
         self.cluster_conqueror = ClusterConqueror(self)
     
     def reset(self):
@@ -383,18 +413,21 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        NIKHIL'S TEST (C1): Test basic simulation structure
+        NIKHIL'S TEST (C2): Test boundary and obstacle detection
         TODO: Full integration in later commits
         """
-        # Test Nikhil's basic simulation
+        # Test Nikhil's enhanced simulation with obstacles
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Nikhil's ClusterConqueror (C1)")
+        print("[CPU AI] Testing Nikhil's ClusterConqueror (C2)")
         
-        test_direction = RIGHT
-        end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
-            self.ball_pos, test_direction, frozenset()
-        )
-        print(f"[CPU AI] Test result: Moved from {self.ball_pos} to {end_pos}")
+        # Test multiple directions
+        for test_direction in [RIGHT, DOWN, UP_RIGHT]:
+            print(f"\n[CPU AI] Testing direction: {test_direction}")
+            end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
+                self.ball_pos, test_direction, frozenset()
+            )
+            print(f"[CPU AI] Result: {self.ball_pos} → {end_pos}, Mine: {hit_mine}, Path: {len(path)} steps")
+        
         print(f"{'='*70}\n")
         
         # Temporary greedy AI (will be replaced)
@@ -416,7 +449,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 5/16: Nikhil - Basic Simulation]")
+        self.root.title("Inertia [Commit 6/16: Nikhil - Boundary Detection]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -445,7 +478,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 5/16: Nikhil - Basic Move Simulation (1/5) ✅",
+            text="Commit 6/16: Nikhil - Boundary & Obstacle Detection (2/5) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -801,7 +834,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Nikhil's Module: 1/5 commits ✅")
+               f"Nikhil's Module: 2/5 commits ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -830,15 +863,16 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 5/16 - NIKHIL: Basic Move Simulation Structure")
+    print("COMMIT 6/16 - NIKHIL: Boundary & Obstacle Detection")
     print("=" * 70)
-    print("✅ ClusterConqueror class created")
-    print("✅ simulate_move() skeleton implemented")
-    print("✅ Basic path tracking added")
-    print("✅ ALL_DIRECTIONS defined")
-    print("📊 Progress: Nikhil 1/5 commits")
-    print("📊 Total Progress: 5/16 commits")
-    print("⏭️  Next: Boundary & obstacle detection (C2)")
+    print("✅ Full boundary checking implemented")
+    print("✅ MINE detection added (hit_mine flag)")
+    print("✅ STOP tile detection added")
+    print("✅ Continuous sliding loop")
+    print("✅ _is_in_bounds() helper method")
+    print("📊 Progress: Nikhil 2/5 commits")
+    print("📊 Total Progress: 6/16 commits")
+    print("⏭️  Next: Gem collection mechanics (C3)")
     print("=" * 70)
     
     root = tk.Tk()
