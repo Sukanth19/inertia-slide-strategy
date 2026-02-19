@@ -1,606 +1,719 @@
 
+
 import tkinter as tk
 from tkinter import messagebox
 import random
 
-EMPTY, GEM, MINE, STOP = 0, 1, 2, 3
-UP, DOWN, LEFT, RIGHT = (-1, 0), (1, 0), (0, -1), (0, 1)
-UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT = (-1, -1), (-1, 1), (1, -1), (1, 1)
-ALL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT]
+# Cell types
+EMPTY = 0
+GEM = 1
+MINE = 2
+STOP = 3
 
+# Directions - now includes diagonals
+UP = (-1, 0)
+DOWN = (1, 0)
+LEFT = (0, -1)
+RIGHT = (0, 1)
+UP_LEFT = (-1, -1)
+UP_RIGHT = (-1, 1)
+DOWN_LEFT = (1, -1)
+DOWN_RIGHT = (1, 1)
+
+ALL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT]
+CARDINAL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
+
+# Rebalanced maps with better difficulty progression
 MAPS = {
-    "Map 1": {
-        "rows": 10, "cols": 10, "start": (5, 0),
-        "gems": [(1, 3), (3, 1), (3, 5), (5, 3), (5, 7), (7, 5), (8, 8), (2, 8), (8, 2)],
-        "mines": [(2, 2), (4, 4), (6, 6), (5, 5), (7, 3)],
-        "stops": [(1, 2), (2, 5), (5, 2), (5, 8), (8, 5), (3, 7), (7, 1)]
+    "Map 1 - Introduction": {
+        "rows": 8,
+        "cols": 8,
+        "start": (3, 0),
+        "gems": [(3, 3), (3, 5), (5, 3), (1, 3)],
+        "mines": [(2, 3), (4, 3), (3, 7)],
+        "stops": [(3, 6), (5, 5), (1, 5)]
     },
-    "Map 2": {
-        "rows": 12, "cols": 12, "start": (0, 0),
-        "gems": [(0, 11), (11, 0), (11, 11), (5, 5), (3, 3), (8, 8), (3, 8), (8, 3), (6, 2), (2, 9), (9, 6)],
-        "mines": [(1, 1), (1, 10), (10, 1), (10, 10), (5, 6), (6, 5), (4, 4), (7, 7), (2, 5), (9, 4)],
-        "stops": [(0, 10), (10, 0), (5, 4), (4, 6), (7, 5), (5, 7), (2, 2), (9, 9), (3, 6), (8, 5)]
+    "Map 2 - Corner Maze": {
+        "rows": 8,
+        "cols": 8,
+        "start": (0, 0),
+        "gems": [(0, 7), (7, 0), (7, 7), (3, 3), (4, 4)],
+        "mines": [(1, 1), (6, 1), (1, 6), (6, 6)],
+        "stops": [(0, 6), (6, 0), (1, 7), (7, 1), (3, 4), (4, 3)]
     },
-    "Map 3": {
-        "rows": 14, "cols": 14, "start": (7, 7),
-        "gems": [(0, 3), (0, 10), (3, 0), (3, 13), (10, 0), (10, 13), (13, 3), (13, 10), (5, 5), (8, 8), (5, 8), (8, 5)],
-        "mines": [(1, 1), (1, 12), (12, 1), (12, 12), (4, 7), (9, 7), (7, 4), (7, 9), (6, 6), (7, 8), (8, 7), (5, 9)],
-        "stops": [(2, 3), (2, 10), (3, 2), (3, 11), (10, 2), (10, 11), (11, 3), (11, 10), (6, 7), (7, 6), (8, 6), (9, 8)]
+    "Map 3 - Diamond Challenge": {
+        "rows": 8,
+        "cols": 8,
+        "start": (4, 0),
+        "gems": [(1, 3), (3, 1), (3, 5), (5, 3), (4, 7), (6, 5)],
+        "mines": [(0, 0), (0, 7), (7, 0), (7, 7), (4, 4)],
+        "stops": [(4, 1), (4, 6), (2, 3), (6, 3), (3, 3), (5, 5)]
+    },
+    "Map 4 - Cross Roads": {
+        "rows": 9,
+        "cols": 9,
+        "start": (0, 4),
+        "gems": [(2, 4), (4, 2), (4, 4), (4, 6), (6, 4), (8, 2), (8, 6)],
+        "mines": [(1, 1), (1, 7), (7, 1), (7, 7), (4, 8)],
+        "stops": [(3, 4), (5, 4), (4, 3), (4, 5), (6, 2), (6, 6)]
+    },
+    "Map 5 - Spiral Trap": {
+        "rows": 9,
+        "cols": 9,
+        "start": (0, 0),
+        "gems": [(0, 8), (8, 8), (8, 0), (4, 4), (2, 2), (6, 6)],
+        "mines": [(2, 6), (6, 2), (1, 4), (7, 4), (4, 1), (4, 7)],
+        "stops": [(0, 7), (7, 8), (8, 1), (1, 0), (2, 4), (6, 4), (4, 2), (4, 6)]
+    },
+    "Map 6 - Advanced Maze": {
+        "rows": 10,
+        "cols": 10,
+        "start": (0, 0),
+        "gems": [(0, 9), (5, 5), (9, 0), (9, 9), (2, 5), (7, 4), (4, 2), (5, 7)],
+        "mines": [(2, 2), (2, 7), (7, 2), (7, 7), (4, 4), (5, 6), (3, 0), (6, 9)],
+        "stops": [(0, 8), (1, 0), (5, 4), (8, 0), (9, 1), (9, 8), (4, 5), (6, 8), (2, 4), (7, 5)]
+    },
+    "Map 7 - Expert Grid": {
+        "rows": 10,
+        "cols": 10,
+        "start": (5, 5),
+        "gems": [(0, 0), (0, 9), (9, 0), (9, 9), (2, 5), (5, 2), (5, 7), (7, 5)],
+        "mines": [(1, 1), (1, 8), (8, 1), (8, 8), (3, 3), (3, 6), (6, 3), (6, 6)],
+        "stops": [(0, 5), (5, 0), (9, 5), (5, 9), (2, 2), (2, 7), (7, 2), (7, 7), (4, 5), (5, 4)]
+    },
+    "Map 8 - Master Challenge": {
+        "rows": 12,
+        "cols": 12,
+        "start": (6, 0),
+        "gems": [(0, 0), (0, 11), (11, 0), (11, 11), (3, 3), (8, 8), (3, 8), (8, 3)],
+        "mines": [(1, 1), (1, 10), (10, 1), (10, 10), (5, 5), (6, 6)],
+        "stops": [(0, 6), (6, 11), (11, 6), (6, 0), (2, 2), (9, 9), (2, 9), (9, 2), (5, 0), (6, 10)]
     }
 }
 
-# ========== SUKANTH 1.1: GRAPH STRUCTURE ==========
 
-class GraphBuilder:
-    """SUKANTH 1.1"""
-    def __init__(self, board, rows, cols):
-        self.board = board
-        self.rows = rows
-        self.cols = cols
-        self.graph = {}
-        self.cell_types = {}
-    
-    def build_adjacency_list(self):
-        for r in range(self.rows):
-            for c in range(self.cols):
-                pos = (r, c)
-                self.cell_types[pos] = self.board[r][c]
-                if self.board[r][c] == MINE:
-                    continue
-                neighbors = []
-                for dr, dc in ALL_DIRECTIONS:
-                    nr, nc = r + dr, c + dc
-                    if (0 <= nr < self.rows and 0 <= nc < self.cols and 
-                        self.board[nr][nc] != MINE):
-                        neighbors.append((nr, nc))
-                self.graph[pos] = neighbors
-        return self.graph, self.cell_types
+# ==================== SUKANT'S MODULE - COMMIT 1/4 ====================
 
-
-# ========== SUKANTH 1.2: GRID REGION STRUCTURE ==========
-
-class GridRegion:
-    """SUKANTH 1.2"""
-    def __init__(self, board, row_start, row_end, col_start, col_end, all_gems):
-        self.board = board
-        self.row_start = row_start
-        self.row_end = row_end
-        self.col_start = col_start
-        self.col_end = col_end
-        self.rows = row_end - row_start
-        self.cols = col_end - col_start
-        self.gems = self._extract_gems(all_gems)
-        
-        # SUKANTH 1.4: Store boundary cells (will be set externally)
-        self.boundaries = {'north': [], 'south': [], 'east': [], 'west': []}
-    
-    def _extract_gems(self, all_gems):
-        region_gems = set()
-        for r, c in all_gems:
-            if self.row_start <= r < self.row_end and self.col_start <= c < self.col_end:
-                region_gems.add((r, c))
-        return region_gems
-    
-    def size(self):
-        return self.rows * self.cols
-    
-    def contains(self, pos):
-        r, c = pos
-        return (self.row_start <= r < self.row_end and 
-                self.col_start <= c < self.col_end)
-    
-    def is_on_boundary(self, pos):
-        """SUKANTH 1.4: Check if position is on region boundary"""
-        r, c = pos
-        return (r == self.row_start or r == self.row_end - 1 or
-                c == self.col_start or c == self.col_end - 1)
-
-
-# ========== SUKANTH 1.3: RECURSIVE BISECTION ==========
-
-class DivideConquerSplitter:
-    """SUKANTH 1.3"""
-    def __init__(self, board, rows, cols, split_threshold=25):
-        self.board = board
-        self.rows = rows
-        self.cols = cols
-        self.split_threshold = split_threshold
-    
-    def recursive_split(self, region, depth=0):
-        if region.size() <= self.split_threshold:
-            return [region]
-        
-        left_region, right_region = self._bisect_region(region, depth)
-        left_results = self.recursive_split(left_region, depth + 1)
-        right_results = self.recursive_split(right_region, depth + 1)
-        
-        return left_results + right_results
-    
-    def _bisect_region(self, region, depth):
-        split_vertically = (depth % 2 == 0)
-        
-        if split_vertically:
-            mid_col = region.col_start + region.cols // 2
-            left_region = GridRegion(self.board, region.row_start, region.row_end,
-                                    region.col_start, mid_col, region.gems)
-            right_region = GridRegion(self.board, region.row_start, region.row_end,
-                                     mid_col, region.col_end, region.gems)
-        else:
-            mid_row = region.row_start + region.rows // 2
-            left_region = GridRegion(self.board, region.row_start, mid_row,
-                                    region.col_start, region.col_end, region.gems)
-            right_region = GridRegion(self.board, mid_row, region.row_end,
-                                     region.col_start, region.col_end, region.gems)
-        
-        return left_region, right_region
-
-
-# ========== SUKANTH 1.4: BOUNDARY DETECTION & STATE TRACKING ==========
-
-class BoundaryDetector:
+class GemDivider:
     """
-    SUKANTH 1.4: Identifies boundary cells for region interfaces.
+    SUKANT - Divide Phase (Commit 1/4)
+    Basic gem extraction from board
     
-    Critical for D&C COMBINE phase:
-    - Boundaries are where subproblems connect
-    - Need to track which cells form region edges
-    - States at boundaries enable solution merging
+    Responsibility:
+    - Extract remaining gems from the game board
+    - Return as frozenset for immutability
     """
     
-    def __init__(self, board):
-        self.board = board
+    def __init__(self, game, min_cluster_size=2):
+        """
+        Initialize the Gem Divider.
+        
+        Args:
+            game: InertiaGame instance
+            min_cluster_size: Minimum gems per cluster (for future use)
+        """
+        self.game = game
+        self.min_cluster_size = min_cluster_size
+        print("[SUKANT C1] ✅ GemDivider initialized - Basic extraction ready")
     
-    def detect_boundaries(self, region):
+    def get_remaining_gems(self):
         """
-        SUKANTH 1.4: Find all boundary cells of a region.
+        Extract all gems currently on the board.
         
-        Boundaries are cells on the edge of the region that:
-        1. Are not mines
-        2. Can serve as entry/exit points
+        This scans the entire game board and collects positions
+        of all uncollected gems.
+        
+        Returns:
+            frozenset: Set of (row, col) tuples representing gem positions
         """
-        boundaries = {
-            'north': [],   # Top edge
-            'south': [],   # Bottom edge
-            'east': [],    # Right edge
-            'west': []     # Left edge
-        }
+        gems = set()
         
-        # North boundary (top row)
-        for c in range(region.col_start, region.col_end):
-            pos = (region.row_start, c)
-            if self.board[pos[0]][pos[1]] != MINE:
-                boundaries['north'].append(pos)
+        # Scan entire board
+        for r in range(self.game.rows):
+            for c in range(self.game.cols):
+                if self.game.board[r][c] == GEM:
+                    gems.add((r, c))
         
-        # South boundary (bottom row)
-        for c in range(region.col_start, region.col_end):
-            pos = (region.row_end - 1, c)
-            if self.board[pos[0]][pos[1]] != MINE:
-                boundaries['south'].append(pos)
+        print(f"[SUKANT C1] 🔍 Extracted {len(gems)} gems from {self.game.rows}x{self.game.cols} board")
         
-        # West boundary (left column)
-        for r in range(region.row_start, region.row_end):
-            pos = (r, region.col_start)
-            if self.board[pos[0]][pos[1]] != MINE:
-                boundaries['west'].append(pos)
-        
-        # East boundary (right column)
-        for r in range(region.row_start, region.row_end):
-            pos = (r, region.col_end - 1)
-            if self.board[pos[0]][pos[1]] != MINE:
-                boundaries['east'].append(pos)
-        
-        # Remove duplicates (corners appear in two lists)
-        for direction in boundaries:
-            boundaries[direction] = list(set(boundaries[direction]))
-        
-        total = sum(len(v) for v in boundaries.values())
-        print(f"[SUKANTH-1.4-BOUNDARY] Region [{region.row_start}:{region.row_end}, "
-              f"{region.col_start}:{region.col_end}]: {total} boundary cells")
-        
-        return boundaries
-    
-    def get_all_boundary_positions(self, region):
-        """
-        SUKANTH 1.4: Get flattened list of all boundary positions.
-        Used for state tracking.
-        """
-        boundaries = self.detect_boundaries(region)
-        all_positions = []
-        for positions in boundaries.values():
-            all_positions.extend(positions)
-        
-        # Remove duplicates
-        return list(set(all_positions))
+        # Return as frozenset (immutable, hashable)
+        return frozenset(gems)
 
 
-class BoundaryStateTracker:
-    """
-    SUKANTH 1.4: Tracks states at region boundaries.
-    
-    For D&C COMBINE:
-    - Each boundary position can have multiple states
-    - State = (position, gems_collected, score)
-    - Used to match exit states from one region with entry states to next
-    """
-    
-    def __init__(self):
-        self.boundary_states = {}  # boundary_pos → list of states
-    
-    def add_state(self, boundary_pos, gems_collected, score, path):
-        """
-        SUKANTH 1.4: Add a state at a boundary position.
-        Multiple states possible at same position (different gem collections).
-        """
-        if boundary_pos not in self.boundary_states:
-            self.boundary_states[boundary_pos] = []
-        
-        state = {
-            'position': boundary_pos,
-            'gems': frozenset(gems_collected),
-            'score': score,
-            'path': path
-        }
-        
-        self.boundary_states[boundary_pos].append(state)
-    
-    def get_states_at(self, boundary_pos):
-        """SUKANTH 1.4: Get all states at a boundary position"""
-        return self.boundary_states.get(boundary_pos, [])
-    
-    def get_all_boundary_positions(self):
-        """SUKANTH 1.4: Get all boundary positions that have states"""
-        return list(self.boundary_states.keys())
-    
-    def count_states(self):
-        """SUKANTH 1.4: Total number of states tracked"""
-        return sum(len(states) for states in self.boundary_states.values())
-
+# ==================== ORIGINAL GAME CODE ====================
 
 class InertiaGame:
-    def __init__(self, map_name):
+    def __init__(self, map_name="Map 1 - Introduction"):
         self.map_name = map_name
-        self.graph_builder = None
-        self.graph = {}
-        self.cell_types = {}
-        self.root_region = None
-        self.dc_splitter = None
-        self.leaf_regions = []
-        self.boundary_detector = None  # NEW: SUKANTH 1.4
-        self.region_boundaries = {}     # NEW: region_id → boundaries
         self.reset()
+        
+        # SUKANT'S ADDITION: Initialize gem divider
+        self.gem_divider = GemDivider(self, min_cluster_size=2)
     
     def reset(self):
+        """Reset game to initial state"""
         map_data = MAPS[self.map_name]
-        self.rows, self.cols = map_data["rows"], map_data["cols"]
+        self.rows = map_data["rows"]
+        self.cols = map_data["cols"]
         self.initial_pos = map_data["start"]
-        self.board = [[EMPTY] * self.cols for _ in range(self.rows)]
         
-        for r, c in map_data["gems"]: self.board[r][c] = GEM
-        for r, c in map_data["mines"]: self.board[r][c] = MINE
-        for r, c in map_data["stops"]: self.board[r][c] = STOP
+        self.board = [[EMPTY for _ in range(self.cols)] for _ in range(self.rows)]
+        
+        # Place gems
+        for r, c in map_data["gems"]:
+            self.board[r][c] = GEM
+        
+        # Place mines
+        for r, c in map_data["mines"]:
+            self.board[r][c] = MINE
+        
+        # Place stops
+        for r, c in map_data["stops"]:
+            self.board[r][c] = STOP
         
         self.ball_pos = self.initial_pos
-        self.human_score = self.cpu_score = self.human_moves = self.cpu_moves = 0
-        self.game_over = self.human_eliminated = self.cpu_eliminated = False
+        self.human_score = 0
+        self.cpu_score = 0
+        self.human_moves = 0
+        self.cpu_moves = 0
+        self.game_over = False
+        self.human_eliminated = False
+        self.cpu_eliminated = False
         self.total_gems = len(map_data["gems"])
-        self.cpu_history = []
         
-        # SUKANTH 1.1: Build graph
-        self.graph_builder = GraphBuilder(self.board, self.rows, self.cols)
-        self.graph, self.cell_types = self.graph_builder.build_adjacency_list()
-        
-        # SUKANTH 1.2: Create root region
-        all_gems = set(map_data["gems"])
-        self.root_region = GridRegion(self.board, 0, self.rows, 0, self.cols, all_gems)
-        
-        # SUKANTH 1.3: Recursively split grid
-        self.dc_splitter = DivideConquerSplitter(self.board, self.rows, self.cols)
-        self.leaf_regions = self.dc_splitter.recursive_split(self.root_region, depth=0)
-        
-        # SUKANTH 1.4: Detect boundaries for each region
-        self.boundary_detector = BoundaryDetector(self.board)
-        self.region_boundaries = {}
-        
-        for i, region in enumerate(self.leaf_regions):
-            boundaries = self.boundary_detector.detect_boundaries(region)
-            self.region_boundaries[i] = boundaries
-            
-            # Store in region object
-            region.boundaries = boundaries
-        
-        print(f"[SUKANTH-1.4-COMPLETE] D&C DIVIDE phase complete:")
-        print(f"  - {len(self.leaf_regions)} regions")
-        print(f"  - Boundaries detected for all regions")
-        print(f"  - Ready for CONQUER phase (Nikhil)")
+        # SUKANT'S ADDITION: Reinitialize divider on reset
+        self.gem_divider = GemDivider(self, min_cluster_size=2)
+    
+    def change_map(self, map_name):
+        """Change to different map"""
+        self.map_name = map_name
+        self.reset()
     
     def simulate_move(self, direction):
+        """Simulate a slide in given direction from current position."""
         dr, dc = direction
         r, c = self.ball_pos
-        gems, path, hit_mine = 0, [(r, c)], False
+        gems = 0
+        path = [(r, c)]
+        hit_mine = False
         
         while True:
             next_r, next_c = r + dr, c + dc
-            if not (0 <= next_r < self.rows and 0 <= next_c < self.cols): break
+            
+            if next_r < 0 or next_r >= self.rows or next_c < 0 or next_c >= self.cols:
+                break
             
             r, c = next_r, next_c
             path.append((r, c))
             
-            cell = self.board[r][c]
-            if cell == GEM: gems += 1
-            elif cell == MINE: hit_mine = True; break
-            elif cell == STOP: break
+            if self.board[r][c] == GEM:
+                gems += 1
+            elif self.board[r][c] == MINE:
+                hit_mine = True
+                break
+            elif self.board[r][c] == STOP:
+                break
         
         return (r, c), gems, hit_mine, path
     
-    def get_cpu_move(self):
-        """Simple greedy AI - will be replaced by D&C+DP"""
-        best_dir, best_score, best_path = None, -999999, []
-        
-        for direction in ALL_DIRECTIONS:
-            end_pos, gems, hit_mine, path = self.simulate_move(direction)
-            if hit_mine or end_pos == self.ball_pos: continue
-            if end_pos in self.cpu_history[-3:]: continue
-            
-            score = gems * 10000
-            remaining = [(r, c) for r in range(self.rows) for c in range(self.cols) 
-                        if self.board[r][c] == GEM]
-            if remaining:
-                min_dist = min(abs(end_pos[0]-g[0]) + abs(end_pos[1]-g[1]) for g in remaining)
-                score -= min_dist * 50
-            
-            if score > best_score:
-                best_dir, best_score, best_path = direction, score, path
-        
-        return best_dir, best_path
-    
     def make_move(self, direction, is_human=True):
-        if self.game_over: return False, 0, [], False
+        """Execute a move for human or CPU."""
+        if self.game_over:
+            return False, 0, [], False
         
         end_pos, gems, hit_mine, path = self.simulate_move(direction)
         
         if hit_mine:
-            if is_human: self.human_eliminated = True
-            else: self.cpu_eliminated = True
+            if is_human:
+                self.human_eliminated = True
+            else:
+                self.cpu_eliminated = True
             self.game_over = True
             return False, 0, path, True
         
-        if end_pos == self.ball_pos: return False, 0, [], False
+        if end_pos == self.ball_pos:
+            return False, 0, [], False
         
         self.ball_pos = end_pos
         
-        if is_human: self.human_moves += 1
+        if is_human:
+            self.human_moves += 1
         else:
             self.cpu_moves += 1
-            self.cpu_history.append(end_pos)
-            if len(self.cpu_history) > 6: self.cpu_history.pop(0)
         
         for r, c in path[1:]:
             if self.board[r][c] == GEM:
                 self.board[r][c] = EMPTY
-                if is_human: self.human_score += 1
-                else: self.cpu_score += 1
+                if is_human:
+                    self.human_score += 1
+                else:
+                    self.cpu_score += 1
         
-        if self.human_score + self.cpu_score >= self.total_gems: self.game_over = True
+        if self.human_score + self.cpu_score >= self.total_gems:
+            self.game_over = True
         
         return True, gems, path, False
     
-    def change_map(self, map_name):
-        self.map_name = map_name
-        self.reset()
+    def get_cpu_move(self):
+        """
+        Get CPU move - TEMPORARY: Uses simple greedy strategy
+        
+        SUKANT'S TEST: Demonstrates gem extraction
+        TODO: Full AI will be implemented in later commits
+        """
+        # Test Sukant's gem extraction
+        remaining_gems = self.gem_divider.get_remaining_gems()
+        print(f"[CPU AI] 🎯 Target: {len(remaining_gems)} gems")
+        
+        # Temporary greedy AI (will be replaced)
+        best_direction = None
+        best_gems = 0
+        best_path = []
+        
+        for direction in ALL_DIRECTIONS:
+            end_pos, gems, hit_mine, path = self.simulate_move(direction)
+            if not hit_mine and end_pos != self.ball_pos:
+                if gems > best_gems or (gems == best_gems and best_direction is None):
+                    best_direction = direction
+                    best_gems = gems
+                    best_path = path
+        
+        return best_direction, best_path
 
 
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("INERTIA [C1.4: Sukanth-COMPLETE]")
+        self.root.title("Inertia [Commit 1/16: Sukant - Gem Extraction]")
+        self.root.configure(bg="#1a1a2e")
         
-        self.colors = {
-            'bg_darkest': '#0d0221', 'bg_dark': '#1a0b2e', 'bg_medium': '#2d1b4e',
-            'accent_cyan': '#00f5ff', 'accent_magenta': '#e148d4', 'accent_purple': '#a663cc',
-            'gem': '#00d9ff', 'mine': '#ff006e', 'stop': '#c77dff', 'ball': '#ffffff',
-            'text_bright': '#ffffff', 'text_dim': '#b8b8ff'
-        }
-        
-        self.root.configure(bg=self.colors['bg_darkest'])
-        
-        self.map_rotation = list(MAPS.keys())
-        random.shuffle(self.map_rotation)
-        self.current_map_index = 0
-        
-        self.game = InertiaGame(self.map_rotation[0])
-        self.cell_size = 55
-        self.animating = self.waiting_for_cpu = False
+        random_map = random.choice(list(MAPS.keys()))
+        self.game = InertiaGame(random_map)
+        self.cell_size = 60
+        self.animating = False
+        self.waiting_for_cpu = False
         
         self._create_widgets()
         self._bind_keys()
         self.draw_board()
     
     def _create_widgets(self):
-        main = tk.Frame(self.root, bg=self.colors['bg_darkest'])
-        main.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        """Create UI widgets with modern styling"""
+        title_frame = tk.Frame(self.root, bg="#16213e", pady=15)
+        title_frame.pack(fill=tk.X)
         
-        title_border = tk.Frame(main, bg=self.colors['accent_magenta'], padx=3, pady=3)
-        title_border.pack()
+        title_label = tk.Label(
+            title_frame, 
+            text="⚡ INERTIA ⚡", 
+            font=("Arial", 28, "bold"),
+            fg="#00d4ff",
+            bg="#16213e"
+        )
+        title_label.pack()
         
-        title_inner = tk.Frame(title_border, bg=self.colors['bg_dark'], padx=30, pady=20)
-        title_inner.pack()
+        subtitle = tk.Label(
+            title_frame,
+            text="Commit 1/16: Sukant - Basic Gem Extraction ✅",
+            font=("Arial", 10),
+            fg="#a8dadc",
+            bg="#16213e"
+        )
+        subtitle.pack()
         
-        tk.Label(title_inner, text="⬢  I N E R T I A  ⬢", font=("Helvetica", 42, "bold"),
-                fg=self.colors['accent_cyan'], bg=self.colors['bg_dark']).pack()
+        control_frame = tk.Frame(self.root, bg="#1a1a2e", pady=10)
+        control_frame.pack()
         
-        tk.Label(title_inner, text="C1.4: SUKANTH - Boundary Detection (D&C COMPLETE)",
-                font=("Courier", 10, "bold"), fg=self.colors['accent_purple'], bg=self.colors['bg_dark']).pack(pady=(8, 0))
+        map_frame = tk.Frame(control_frame, bg="#1a1a2e")
+        map_frame.pack(side=tk.LEFT, padx=10)
         
-        map_outer = tk.Frame(main, bg=self.colors['accent_cyan'], padx=2, pady=2)
-        map_outer.pack(fill=tk.X, pady=(20, 15))
+        tk.Label(
+            map_frame, 
+            text="Current Map:", 
+            font=("Arial", 11, "bold"),
+            fg="#ffffff",
+            bg="#1a1a2e"
+        ).pack(side=tk.LEFT, padx=5)
         
-        map_frame = tk.Frame(map_outer, bg=self.colors['bg_medium'], padx=20, pady=15)
-        map_frame.pack(fill=tk.X)
+        self.map_label = tk.Label(
+            map_frame,
+            text=self.game.map_name,
+            font=("Arial", 11),
+            fg="#00d4ff",
+            bg="#1a1a2e"
+        )
+        self.map_label.pack(side=tk.LEFT, padx=5)
         
-        self.map_label = tk.Label(map_frame, text=self.game.map_name, font=("Helvetica", 14, "bold"),
-                                  fg=self.colors['text_bright'], bg=self.colors['bg_medium'])
-        self.map_label.pack()
+        new_game_btn = tk.Button(
+            control_frame,
+            text="🎲 New Game",
+            command=self.new_random_game,
+            font=("Arial", 11, "bold"),
+            bg="#4CAF50",
+            fg="white",
+            activebackground="#45a049",
+            activeforeground="white",
+            relief=tk.FLAT,
+            padx=20,
+            pady=8,
+            cursor="hand2"
+        )
+        new_game_btn.pack(side=tk.LEFT, padx=10)
         
-        controls = tk.Frame(main, bg=self.colors['bg_darkest'])
-        controls.pack(pady=(0, 15))
+        restart_btn = tk.Button(
+            control_frame,
+            text="🔄 Restart",
+            command=self.restart_game,
+            font=("Arial", 11, "bold"),
+            bg="#e94560",
+            fg="white",
+            activebackground="#c23550",
+            activeforeground="white",
+            relief=tk.FLAT,
+            padx=20,
+            pady=8,
+            cursor="hand2"
+        )
+        restart_btn.pack(side=tk.LEFT, padx=10)
         
-        for text, cmd in [("▶ NEXT", self.next_map), ("↻ RESTART", self.restart_game)]:
-            border = tk.Frame(controls, bg=self.colors['accent_magenta'], padx=2, pady=2)
-            border.pack(side=tk.LEFT, padx=8)
-            tk.Button(border, text=text, font=("Helvetica", 12, "bold"),
-                     fg=self.colors['text_bright'], bg=self.colors['bg_medium'],
-                     relief=tk.FLAT, padx=30, pady=12, cursor="hand2", command=cmd).pack()
+        score_frame = tk.Frame(self.root, bg="#16213e", pady=15)
+        score_frame.pack(fill=tk.X, padx=20)
         
-        score_outer = tk.Frame(main, bg=self.colors['accent_purple'], padx=2, pady=2)
-        score_outer.pack(fill=tk.X, pady=(0, 15))
-        
-        score_frame = tk.Frame(score_outer, bg=self.colors['bg_medium'], padx=25, pady=18)
-        score_frame.pack(fill=tk.X)
-        
-        self.info_label = tk.Label(score_frame, text="", font=("Courier", 13, "bold"),
-                                   fg=self.colors['accent_cyan'], bg=self.colors['bg_medium'])
+        self.info_label = tk.Label(
+            score_frame,
+            text="",
+            font=("Arial", 12, "bold"),
+            fg="#00d4ff",
+            bg="#16213e",
+            pady=10
+        )
         self.info_label.pack()
         
-        canvas_outer = tk.Frame(main, bg=self.colors['accent_cyan'], padx=5, pady=5)
-        canvas_outer.pack(pady=(0, 15))
+        canvas_container = tk.Frame(self.root, bg="#0f3460", padx=3, pady=3)
+        canvas_container.pack(pady=10)
         
-        canvas_inner = tk.Frame(canvas_outer, bg=self.colors['bg_dark'], padx=3, pady=3)
-        canvas_inner.pack()
-        
-        self.canvas = tk.Canvas(canvas_inner, bg=self.colors['bg_darkest'], highlightthickness=0)
+        self.canvas = tk.Canvas(
+            canvas_container,
+            bg="#e8f4f8",
+            highlightthickness=0
+        )
         self.canvas.pack()
         self.canvas.bind("<Button-1>", self.mouse_click)
+        
+        inst_frame = tk.Frame(self.root, bg="#1a1a2e", pady=10)
+        inst_frame.pack()
+        
+        instructions = [
+            ("🎮 Controls:", "#00d4ff", "bold"),
+            ("Arrow Keys / WASD", "#ffffff", "normal"),
+            ("or", "#a8dadc", "normal"),
+            ("Click Mouse", "#ffffff", "normal"),
+            ("(8 Directions!)", "#00d4ff", "normal")
+        ]
+        
+        for text, color, weight in instructions:
+            tk.Label(
+                inst_frame,
+                text=text,
+                font=("Arial", 9, weight),
+                fg=color,
+                bg="#1a1a2e"
+            ).pack(side=tk.LEFT, padx=3)
+        
+        legend_frame = tk.Frame(self.root, bg="#16213e", pady=10)
+        legend_frame.pack(fill=tk.X, padx=20)
+        
+        legend_items = [
+            ("💎 Gem", "#00aaff"),
+            ("❌ Mine", "#ff0000"),
+            ("🛑 Stop", "#666666"),
+            ("⚫ Ball", "#4a4a4a")
+        ]
+        
+        for text, color in legend_items:
+            item_frame = tk.Frame(legend_frame, bg="#16213e")
+            item_frame.pack(side=tk.LEFT, padx=15)
+            tk.Label(
+                item_frame,
+                text=text,
+                font=("Arial", 9),
+                fg=color,
+                bg="#16213e"
+            ).pack()
     
     def _bind_keys(self):
-        for key, direction in [("<Up>", UP), ("<Down>", DOWN), ("<Left>", LEFT), ("<Right>", RIGHT),
-                               ("w", UP), ("s", DOWN), ("a", LEFT), ("d", RIGHT),
-                               ("q", UP_LEFT), ("e", UP_RIGHT), ("z", DOWN_LEFT), ("c", DOWN_RIGHT)]:
-            self.root.bind(key, lambda e, d=direction: self.human_move(d))
+        """Bind keyboard controls"""
+        self.root.bind("<Up>", lambda e: self.human_move(UP))
+        self.root.bind("<Down>", lambda e: self.human_move(DOWN))
+        self.root.bind("<Left>", lambda e: self.human_move(LEFT))
+        self.root.bind("<Right>", lambda e: self.human_move(RIGHT))
+        self.root.bind("w", lambda e: self.human_move(UP))
+        self.root.bind("s", lambda e: self.human_move(DOWN))
+        self.root.bind("a", lambda e: self.human_move(LEFT))
+        self.root.bind("d", lambda e: self.human_move(RIGHT))
+        self.root.bind("q", lambda e: self.human_move(UP_LEFT))
+        self.root.bind("e", lambda e: self.human_move(UP_RIGHT))
+        self.root.bind("z", lambda e: self.human_move(DOWN_LEFT))
+        self.root.bind("c", lambda e: self.human_move(DOWN_RIGHT))
     
     def mouse_click(self, event):
-        if self.animating or self.waiting_for_cpu or self.game.game_over: return
-        col, row = event.x // self.cell_size, event.y // self.cell_size
-        if not (0 <= row < self.game.rows and 0 <= col < self.game.cols): return
+        """Handle mouse click"""
+        if self.animating or self.waiting_for_cpu or self.game.game_over:
+            return
+        
+        col = event.x // self.cell_size
+        row = event.y // self.cell_size
+        
+        if row < 0 or row >= self.game.rows or col < 0 or col >= self.game.cols:
+            return
         
         ball_r, ball_c = self.game.ball_pos
-        dr, dc = row - ball_r, col - ball_c
-        if dr == 0 and dc == 0: return
+        dr = row - ball_r
+        dc = col - ball_c
         
-        if dr != 0 and dc != 0:
-            direction = ((1 if dr > 0 else -1), (1 if dc > 0 else -1))
+        if dr == 0 and dc == 0:
+            return
+        
+        if abs(dr) > 0 and abs(dc) > 0:
+            dir_r = DOWN if dr > 0 else UP
+            dir_c = RIGHT if dc > 0 else LEFT
+            direction = (dir_r[0] + dir_c[0], dir_r[1] + dir_c[1])
         elif abs(dr) > abs(dc):
             direction = DOWN if dr > 0 else UP
         else:
             direction = RIGHT if dc > 0 else LEFT
         
-        self.human_move(direction)
+        if direction:
+            self.human_move(direction)
     
     def draw_board(self):
+        """Draw the game board"""
         self.canvas.delete("all")
-        width, height = self.game.cols * self.cell_size, self.game.rows * self.cell_size
-        self.canvas.config(width=width, height=height)
+        
+        canvas_width = self.game.cols * self.cell_size
+        canvas_height = self.game.rows * self.cell_size
+        self.canvas.config(width=canvas_width, height=canvas_height)
         
         for r in range(self.game.rows):
             for c in range(self.game.cols):
-                x, y = c * self.cell_size, r * self.cell_size
+                x = c * self.cell_size
+                y = r * self.cell_size
+                color = "#f0f8ff" if (r + c) % 2 == 0 else "#e1f0fa"
+                self.canvas.create_rectangle(
+                    x, y, x + self.cell_size, y + self.cell_size,
+                    fill=color, outline=""
+                )
+        
+        for r in range(self.game.rows):
+            for c in range(self.game.cols):
+                x = c * self.cell_size
+                y = r * self.cell_size
                 cx, cy = x + self.cell_size // 2, y + self.cell_size // 2
                 
-                color = self.colors['bg_darkest'] if (r + c) % 2 == 0 else self.colors['bg_dark']
-                self.canvas.create_rectangle(x, y, x + self.cell_size, y + self.cell_size,
-                                            fill=color, outline=self.colors['bg_medium'], width=1)
-                
-                cell = self.game.board[r][c]
-                
-                if cell == GEM:
-                    s = self.cell_size // 3
-                    self.canvas.create_polygon(cx, cy-s, cx+s, cy, cx, cy+s, cx-s, cy,
-                                             fill=self.colors['gem'], outline=self.colors['accent_cyan'], width=3)
-                elif cell == MINE:
-                    m = self.cell_size // 3.5
-                    self.canvas.create_oval(cx-m, cy-m, cx+m, cy+m,
-                                          fill=self.colors['mine'], outline=self.colors['accent_magenta'], width=3)
-                    self.canvas.create_line(cx-m+6, cy-m+6, cx+m-6, cy+m-6, fill='white', width=4)
-                    self.canvas.create_line(cx+m-6, cy-m+6, cx-m+6, cy+m-6, fill='white', width=4)
-                elif cell == STOP:
-                    rad = self.cell_size // 3.2
-                    self.canvas.create_oval(cx-rad, cy-rad, cx+rad, cy+rad,
-                                          fill=self.colors['stop'], outline=self.colors['accent_magenta'], width=3)
+                if self.game.board[r][c] == GEM:
+                    size = self.cell_size // 3
+                    self.canvas.create_polygon(
+                        cx, cy - size,
+                        cx + size, cy,
+                        cx, cy + size,
+                        cx - size, cy,
+                        fill="#00aaff", outline="#0088cc", width=2
+                    )
+                    
+                elif self.game.board[r][c] == MINE:
+                    margin = self.cell_size // 5
+                    self.canvas.create_oval(
+                        cx - margin * 1.5, cy - margin * 1.5,
+                        cx + margin * 1.5, cy + margin * 1.5,
+                        fill="#ff3333", outline="#cc0000", width=2
+                    )
+                    m = margin
+                    self.canvas.create_line(cx - m, cy - m, cx + m, cy + m, fill="white", width=3)
+                    self.canvas.create_line(cx + m, cy - m, cx - m, cy + m, fill="white", width=3)
+                    
+                elif self.game.board[r][c] == STOP:
+                    radius = self.cell_size // 3
+                    self.canvas.create_oval(
+                        cx - radius, cy - radius,
+                        cx + radius, cy + radius,
+                        fill="#ff6b6b", outline="#cc0000", width=3
+                    )
+                    self.canvas.create_rectangle(
+                        cx - radius * 0.6, cy - radius * 0.15,
+                        cx + radius * 0.6, cy + radius * 0.15,
+                        fill="white", outline=""
+                    )
         
         if self.game.ball_pos:
             r, c = self.game.ball_pos
-            cx, cy = c * self.cell_size + self.cell_size // 2, r * self.cell_size + self.cell_size // 2
-            rad = self.cell_size // 3
-            self.canvas.create_oval(cx-rad, cy-rad, cx+rad, cy+rad,
-                                  fill=self.colors['ball'], outline=self.colors['accent_cyan'], width=4, tags="ball")
+            x = c * self.cell_size
+            y = r * self.cell_size
+            cx, cy = x + self.cell_size // 2, y + self.cell_size // 2
+            radius = self.cell_size // 3
+            
+            self.canvas.create_oval(
+                cx - radius, cy - radius,
+                cx + radius, cy + radius,
+                fill="#2a2a2a", outline="#000000", width=2, tags="ball"
+            )
         
         self.update_info()
     
     def update_info(self):
+        """Update information display"""
         remaining = self.game.total_gems - self.game.human_score - self.game.cpu_score
-        self.info_label.config(text=f"YOU: {self.game.human_score}  |  AI: {self.game.cpu_score}  |  LEFT: {remaining}")
+        info = (f"👤 You: {self.game.human_score} gems ({self.game.human_moves} moves)  |  "
+                f"🤖 CPU: {self.game.cpu_score} gems ({self.game.cpu_moves} moves)  |  "
+                f"💎 Remaining: {remaining}")
+        self.info_label.config(text=info)
     
     def animate_move(self, path, callback):
-        if len(path) <= 1: callback(); return
+        """Animate ball sliding"""
+        if len(path) <= 1:
+            callback()
+            return
+        
         self.animating = True
         self._animate_step(path, 0, callback)
     
     def _animate_step(self, path, index, callback):
+        """Single animation step"""
         if index >= len(path):
             self.animating = False
             callback()
             return
+        
         r, c = path[index]
-        cx, cy = c * self.cell_size + self.cell_size // 2, r * self.cell_size + self.cell_size // 2
-        rad = self.cell_size // 3
+        x = c * self.cell_size
+        y = r * self.cell_size
+        cx, cy = x + self.cell_size // 2, y + self.cell_size // 2
+        
         self.canvas.delete("ball")
-        self.canvas.create_oval(cx-rad, cy-rad, cx+rad, cy+rad,
-                              fill=self.colors['ball'], outline=self.colors['accent_cyan'], width=4, tags="ball")
-        self.root.after(50, lambda: self._animate_step(path, index + 1, callback))
+        
+        radius = self.cell_size // 3
+        self.canvas.create_oval(
+            cx - radius, cy - radius,
+            cx + radius, cy + radius,
+            fill="#2a2a2a", outline="#000000", width=2, tags="ball"
+        )
+        
+        self.root.after(80, lambda: self._animate_step(path, index + 1, callback))
     
     def human_move(self, direction):
-        if self.animating or self.waiting_for_cpu or self.game.game_over: return
-        success, gems, path, hit_mine = self.game.make_move(direction, is_human=True)
-        if hit_mine:
-            self.animate_move(path, lambda: messagebox.showinfo("MINE!", "You hit a mine!"))
+        """Handle human move"""
+        if self.animating or self.waiting_for_cpu or self.game.game_over:
             return
-        if not success: return
+        
+        success, gems, path, hit_mine = self.game.make_move(direction, is_human=True)
+        
+        if hit_mine:
+            self.animate_move(path, lambda: self.show_mine_hit("human"))
+            return
+        
+        if not success:
+            return
+        
         self.animate_move(path, self.cpu_move)
     
     def cpu_move(self):
+        """Handle CPU move"""
         self.draw_board()
-        if self.game.game_over: return
+        
+        if self.game.game_over:
+            self.show_game_over()
+            return
         
         self.waiting_for_cpu = True
+        
         direction, path = self.game.get_cpu_move()
+        
         if direction is None:
             self.waiting_for_cpu = False
+            self.show_game_over()
             return
         
         success, gems, path, hit_mine = self.game.make_move(direction, is_human=False)
         
-        def after_move():
+        if hit_mine:
+            def after_cpu_mine():
+                self.draw_board()
+                self.waiting_for_cpu = False
+                self.show_mine_hit("cpu")
+            
+            self.root.after(400, lambda: self.animate_move(path, after_cpu_mine))
+            return
+        
+        def after_cpu_move():
             self.draw_board()
             self.waiting_for_cpu = False
+            if self.game.game_over:
+                self.show_game_over()
         
-        self.root.after(400, lambda: self.animate_move(path, after_move))
+        self.root.after(400, lambda: self.animate_move(path, after_cpu_move))
     
-    def next_map(self):
-        self.current_map_index = (self.current_map_index + 1) % len(self.map_rotation)
-        self.game.change_map(self.map_rotation[self.current_map_index])
-        self.animating = self.waiting_for_cpu = False
-        self.map_label.config(text=self.game.map_name)
+    def show_game_over(self):
+        """Show game over message"""
+        if not self.game.game_over and self.game.human_score + self.game.cpu_score < self.game.total_gems:
+            return
+        
+        if self.game.human_eliminated:
+            winner = "💥 You Hit a Mine! CPU Wins! 💥"
+        elif self.game.cpu_eliminated:
+            winner = "💥 CPU Hit a Mine! You Win! 💥"
+        elif self.game.human_score > self.game.cpu_score:
+            winner = "🎉 You Win! 🎉"
+        elif self.game.cpu_score > self.game.human_score:
+            winner = "🤖 CPU Wins!"
+        else:
+            winner = "🤝 It's a Tie!"
+        
+        efficiency_human = self.game.human_score / max(self.game.human_moves, 1)
+        efficiency_cpu = self.game.cpu_score / max(self.game.cpu_moves, 1)
+        
+        msg = (f"{winner}\n\n"
+               f"👤 You: {self.game.human_score} gems in {self.game.human_moves} moves "
+               f"(Efficiency: {efficiency_human:.2f})\n"
+               f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
+               f"(Efficiency: {efficiency_cpu:.2f})\n\n"
+               f"Commit 1/16: Sukant's Gem Extraction ✅")
+        
+        messagebox.showinfo("Game Over", msg)
+    
+    def show_mine_hit(self, who):
+        """Show mine hit explosion"""
+        msg = "💥 BOOM! You hit a mine!\n\nCPU wins!" if who == "human" else "💥 BOOM! CPU hit a mine!\n\nYou win!"
+        messagebox.showinfo("Mine Hit!", msg)
+        self.show_game_over()
+    
+    def new_random_game(self):
+        """Start a new game with a random map"""
+        random_map = random.choice(list(MAPS.keys()))
+        self.game.change_map(random_map)
+        self.animating = False
+        self.waiting_for_cpu = False
+        self.map_label.config(text=random_map)
         self.draw_board()
     
     def restart_game(self):
+        """Restart current map"""
         self.game.reset()
-        self.animating = self.waiting_for_cpu = False
+        self.animating = False
+        self.waiting_for_cpu = False
         self.draw_board()
 
 
 def main():
+    print("=" * 70)
+    print("COMMIT 1/16 - SUKANT: Basic Gem Extraction")
+    print("=" * 70)
+    print("✅ GemDivider class created")
+    print("✅ get_remaining_gems() implemented")
+    print("📊 Progress: Sukant 1/4 commits")
+    print("=" * 70)
+    
     root = tk.Tk()
-    InertiaGUI(root)
+    app = InertiaGUI(root)
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
