@@ -91,16 +91,17 @@ MAPS = {
 }
 
 
-# ==================== SUKANT'S MODULE - COMMIT 2/4 ====================
+# ==================== SUKANT'S MODULE - COMMIT 3/4 ====================
 
 class GemDivider:
     """
-    SUKANT - Divide Phase (Commit 2/4)
-    Added simple two-way clustering by median split
+    SUKANT - Divide Phase (Commit 3/4)
+    Added recursive division for multi-level clustering
     
     Responsibility:
     - Extract remaining gems from board (C1)
-    - Split gems into 2 clusters by median row (C2) ✅ NEW
+    - Split gems into clusters by median row (C2)
+    - Recursively divide clusters (C3) ✅ NEW
     """
     
     def __init__(self, game, min_cluster_size=2):
@@ -114,7 +115,7 @@ class GemDivider:
         self.game = game
         self.min_cluster_size = min_cluster_size
         self.clusters_created = 0
-        print("[SUKANT C2] ✅ GemDivider initialized - Clustering enabled")
+        print("[SUKANT C3] ✅ GemDivider initialized - Recursive division enabled")
     
     def get_remaining_gems(self):
         """
@@ -130,27 +131,52 @@ class GemDivider:
                 if self.game.board[r][c] == GEM:
                     gems.add((r, c))
         
-        print(f"[SUKANT C2] 🔍 Extracted {len(gems)} gems from board")
+        print(f"[SUKANT C3] 🔍 Extracted {len(gems)} gems from board")
         return frozenset(gems)
     
     def divide_gems_into_clusters(self, gems):
         """
-        NEW (C2): Split gems into 2 clusters by median row.
+        UPDATED (C3): Recursively divide gems into multiple clusters.
         
-        This is a simple two-way split that divides gems horizontally
-        by finding the median row and splitting above/below.
+        This now uses recursive division to create a hierarchical
+        clustering of gems, splitting until clusters are small enough.
         
         Args:
             gems: Frozenset of gem positions
         
         Returns:
-            List of 2 clusters (or 1 if too small)
+            List of clusters (can be more than 2)
         """
-        # Base case: too few gems to split
-        if len(gems) <= self.min_cluster_size:
-            self.clusters_created = 1
-            print(f"[SUKANT C2] ⚠️  Only {len(gems)} gems - keeping single cluster")
-            return [gems]
+        self.clusters_created = 0
+        clusters = self._recursive_divide(gems, depth=0)
+        print(f"[SUKANT C3] 🌳 Recursively created {self.clusters_created} clusters from hierarchical division")
+        return clusters
+    
+    def _recursive_divide(self, gems, depth):
+        """
+        NEW (C3): Recursively divide gems into clusters.
+        
+        This implements the core recursive algorithm:
+        1. Base case: If cluster is too small or depth too deep, stop
+        2. Otherwise: Split into 2 sub-clusters by median row
+        3. Recursively divide each sub-cluster
+        4. Return all resulting clusters
+        
+        Args:
+            gems: Frozenset of gems to divide
+            depth: Current recursion depth
+        
+        Returns:
+            List of clusters from recursive division
+        """
+        print(f"[SUKANT C3] 🔄 Recursive call at depth {depth} with {len(gems)} gems")
+        
+        # Base case: too small or too deep
+        if len(gems) <= self.min_cluster_size or depth > 3:
+            if len(gems) > 0:
+                self.clusters_created += 1
+                print(f"[SUKANT C3] 🛑 Base case reached - Created cluster #{self.clusters_created} with {len(gems)} gems")
+            return [gems] if len(gems) > 0 else []
         
         gems_list = list(gems)
         
@@ -164,21 +190,24 @@ class GemDivider:
         cluster1 = frozenset(g for g in gems_list if g[0] <= median_r)
         cluster2 = frozenset(g for g in gems_list if g[0] > median_r)
         
-        self.clusters_created = 2
-        print(f"[SUKANT C2] ✂️  Split {len(gems)} gems → Cluster1: {len(cluster1)} gems, Cluster2: {len(cluster2)} gems")
-        print(f"[SUKANT C2] 📊 Split at row {median_r}")
+        print(f"[SUKANT C3] ✂️  Depth {depth}: Split {len(gems)} gems → {len(cluster1)} + {len(cluster2)}")
         
-        # Return both clusters if valid
-        if cluster1 and cluster2:
-            return [cluster1, cluster2]
-        else:
-            # Edge case: all gems on same row
-            self.clusters_created = 1
-            return [gems]
+        # Recursively divide each cluster
+        result_clusters = []
+        
+        if cluster1:
+            print(f"[SUKANT C3] ⬇️  Recursing into cluster1 (upper half)")
+            result_clusters.extend(self._recursive_divide(cluster1, depth + 1))
+        
+        if cluster2:
+            print(f"[SUKANT C3] ⬇️  Recursing into cluster2 (lower half)")
+            result_clusters.extend(self._recursive_divide(cluster2, depth + 1))
+        
+        return result_clusters if result_clusters else [gems]
     
     def get_cluster_count(self):
         """
-        NEW (C2): Return number of clusters created in last division.
+        Return number of clusters created in last division.
         
         Returns:
             int: Number of clusters
@@ -298,19 +327,22 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        SUKANT'S TEST: Demonstrates gem clustering (C2)
+        SUKANT'S TEST: Demonstrates recursive clustering (C3)
         TODO: Full AI will be implemented in later commits
         """
-        # Test Sukant's clustering
+        # Test Sukant's recursive clustering
         remaining_gems = self.gem_divider.get_remaining_gems()
         
         if remaining_gems:
+            print(f"\n{'='*60}")
             clusters = self.gem_divider.divide_gems_into_clusters(remaining_gems)
-            print(f"[CPU AI] 🎯 Targeting {len(clusters)} gem clusters")
+            print(f"{'='*60}\n")
+            print(f"[CPU AI] 🎯 Result: {len(clusters)} clusters created via recursive division")
             
-            # Show cluster details
+            # Show cluster summary
             for i, cluster in enumerate(clusters):
-                print(f"[CPU AI] 📦 Cluster {i+1}: {list(cluster)[:3]}{'...' if len(cluster) > 3 else ''}")
+                cluster_list = list(cluster)
+                print(f"[CPU AI] 📦 Cluster {i+1}: Size={len(cluster)}, Gems={cluster_list[:2]}{'...' if len(cluster) > 2 else ''}")
         
         # Temporary greedy AI (will be replaced)
         best_direction = None
@@ -331,7 +363,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 2/16: Sukant - Two-Way Clustering]")
+        self.root.title("Inertia [Commit 3/16: Sukant - Recursive Division]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -360,7 +392,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 2/16: Sukant - Simple Two-Way Clustering ✅",
+            text="Commit 3/16: Sukant - Recursive Division ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -721,7 +753,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Commit 2/16: Sukant's Two-Way Clustering ✅")
+               f"Commit 3/16: Sukant's Recursive Division ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -750,12 +782,12 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 2/16 - SUKANT: Simple Two-Way Clustering")
+    print("COMMIT 3/16 - SUKANT: Recursive Division")
     print("=" * 70)
-    print("✅ divide_gems_into_clusters() implemented")
-    print("✅ Median row-based split")
-    print("✅ get_cluster_count() added")
-    print("📊 Progress: Sukant 2/4 commits")
+    print("✅ _recursive_divide() implemented")
+    print("✅ Depth limiting (max depth 3)")
+    print("✅ Multi-level hierarchical clustering")
+    print("📊 Progress: Sukant 3/4 commits")
     print("=" * 70)
     
     root = tk.Tk()
