@@ -1,4 +1,5 @@
 
+
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -161,21 +162,21 @@ class GemDivider:
         return self.clusters_created
 
 
-# ==================== NIKHIL'S MODULE - COMMIT 3/5 ====================
+# ==================== NIKHIL'S MODULE - COMMIT 4/5 ====================
 
 class ClusterConqueror:
     """
-    NIKHIL - Conquer Phase (Commit 3/5)
-    Complete gem collection mechanics
+    NIKHIL - Conquer Phase (Commit 4/5)
+    Complete 8-direction validation and handling
     
     Responsibility:
     - Simulate moves from any position (C1) ✅
     - Boundary & obstacle detection (C2) ✅
-    - Gem collection along path (C3) ✅ NEW
-    - Track already collected gems (C3) ✅ NEW
+    - Gem collection along path (C3) ✅
+    - Validate all 8 directions (C4) ✅ NEW
+    - Direction naming and debugging (C4) ✅ NEW
     
-    TODO (next commits):
-    - 8-direction validation (C4)
+    TODO (next commit):
     - Fallback strategies (C5)
     """
     
@@ -203,16 +204,29 @@ class ClusterConqueror:
             self.UP_LEFT, self.UP_RIGHT, self.DOWN_LEFT, self.DOWN_RIGHT
         ]
         
-        print("[NIKHIL C3] ✅ ClusterConqueror initialized - Gem collection enabled")
+        # NEW (C4): Direction name mapping for debugging
+        self.DIRECTION_NAMES = {
+            self.UP: "UP ↑",
+            self.DOWN: "DOWN ↓",
+            self.LEFT: "LEFT ←",
+            self.RIGHT: "RIGHT →",
+            self.UP_LEFT: "UP_LEFT ↖",
+            self.UP_RIGHT: "UP_RIGHT ↗",
+            self.DOWN_LEFT: "DOWN_LEFT ↙",
+            self.DOWN_RIGHT: "DOWN_RIGHT ↘"
+        }
+        
+        print("[NIKHIL C4] ✅ ClusterConqueror initialized - All 8 directions validated")
     
     def simulate_move(self, start_pos, direction, already_collected):
         """
-        UPDATED (C3): Now collects gems along the slide path.
+        UPDATED (C4): Enhanced with direction validation.
         
-        Simulates continuous sliding with full gem collection:
-        - Detects gems on path
-        - Only collects gems NOT in already_collected
-        - Returns frozenset of newly collected gems
+        Simulates continuous sliding with full validation:
+        - Validates direction format
+        - Handles all 8 directions (cardinal + diagonal)
+        - Complete boundary and obstacle detection
+        - Full gem collection mechanics
         
         Args:
             start_pos: Starting position (r, c)
@@ -222,12 +236,18 @@ class ClusterConqueror:
         Returns:
             Tuple of (end_pos, gems_collected_set, hit_mine, path)
         """
-        print(f"[NIKHIL C3] 🎯 Simulating slide from {start_pos} direction {direction}")
-        print(f"[NIKHIL C3] 📦 Already collected: {len(already_collected)} gems")
+        # NEW (C4): Validate direction
+        if not self.is_valid_direction(direction):
+            print(f"[NIKHIL C4] ⚠️  Invalid direction: {direction}")
+            return start_pos, frozenset(), False, [start_pos]
+        
+        direction_name = self.get_direction_name(direction)
+        print(f"[NIKHIL C4] 🎯 Simulating slide from {start_pos} direction {direction_name}")
+        print(f"[NIKHIL C4] 📦 Already collected: {len(already_collected)} gems")
         
         dr, dc = direction
         r, c = start_pos
-        gems_on_path = set()  # NEW (C3): Track collected gems
+        gems_on_path = set()
         path = [(r, c)]
         hit_mine = False
         
@@ -237,7 +257,7 @@ class ClusterConqueror:
             
             # Boundary check
             if not self._is_in_bounds(next_r, next_c):
-                print(f"[NIKHIL C3] 🛑 Hit boundary")
+                print(f"[NIKHIL C4] 🛑 Hit boundary")
                 break
             
             # Move to next position
@@ -248,37 +268,61 @@ class ClusterConqueror:
             cell_type = self.game.board[r][c]
             
             if cell_type == GEM:
-                # NEW (C3): Collect gem if not already collected
+                # Collect gem if not already collected
                 if (r, c) not in already_collected:
                     gems_on_path.add((r, c))
-                    print(f"[NIKHIL C3] 💎 Collected gem at ({r}, {c})")
+                    print(f"[NIKHIL C4] 💎 Collected gem at ({r}, {c})")
                 else:
-                    print(f"[NIKHIL C3] ⚪ Skipped already collected gem at ({r}, {c})")
-                
-                # Continue sliding (gems don't stop movement)
+                    print(f"[NIKHIL C4] ⚪ Skipped already collected gem at ({r}, {c})")
+                # Continue sliding
                 
             elif cell_type == MINE:
                 # Hit mine - invalid move
-                print(f"[NIKHIL C3] 💥 Hit MINE at ({r}, {c})")
+                print(f"[NIKHIL C4] 💥 Hit MINE at ({r}, {c})")
                 hit_mine = True
                 break
                 
             elif cell_type == STOP:
                 # Hit stop tile - halt movement
-                print(f"[NIKHIL C3] 🛑 Hit STOP tile at ({r}, {c})")
+                print(f"[NIKHIL C4] 🛑 Hit STOP tile at ({r}, {c})")
                 break
             
             # EMPTY cell - continue sliding
         
         end_pos = (r, c)
-        
-        # NEW (C3): Convert to frozenset for immutability
         gems_collected = frozenset(gems_on_path)
         
-        print(f"[NIKHIL C3] ✅ Slide complete: {start_pos} → {end_pos}")
-        print(f"[NIKHIL C3] 📊 Collected {len(gems_collected)} new gems, Path: {len(path)} steps, Hit mine: {hit_mine}")
+        print(f"[NIKHIL C4] ✅ Slide complete: {start_pos} → {end_pos}")
+        print(f"[NIKHIL C4] 📊 Collected {len(gems_collected)} gems, Path: {len(path)} steps, Hit mine: {hit_mine}")
         
         return end_pos, gems_collected, hit_mine, path
+    
+    def is_valid_direction(self, direction):
+        """
+        NEW (C4): Validate if direction is one of the 8 valid directions.
+        
+        Args:
+            direction: Direction tuple (dr, dc)
+        
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        if not isinstance(direction, tuple) or len(direction) != 2:
+            return False
+        
+        return direction in self.ALL_DIRECTIONS
+    
+    def get_direction_name(self, direction):
+        """
+        NEW (C4): Get human-readable name for direction.
+        
+        Args:
+            direction: Direction tuple (dr, dc)
+        
+        Returns:
+            str: Direction name with arrow symbol
+        """
+        return self.DIRECTION_NAMES.get(direction, f"UNKNOWN {direction}")
     
     def _is_in_bounds(self, r, c):
         """
@@ -301,6 +345,42 @@ class ClusterConqueror:
             List of direction tuples
         """
         return self.ALL_DIRECTIONS
+    
+    def test_all_directions(self, start_pos):
+        """
+        NEW (C4): Test all 8 directions from a given position.
+        
+        Useful for debugging and validation.
+        
+        Args:
+            start_pos: Starting position to test from
+        
+        Returns:
+            Dict mapping direction to (end_pos, valid_move)
+        """
+        print(f"\n[NIKHIL C4] 🧪 Testing all 8 directions from {start_pos}")
+        print(f"{'='*70}")
+        
+        results = {}
+        
+        for direction in self.ALL_DIRECTIONS:
+            direction_name = self.get_direction_name(direction)
+            print(f"\n[NIKHIL C4] Testing {direction_name}")
+            
+            end_pos, gems, hit_mine, path = self.simulate_move(
+                start_pos, direction, frozenset()
+            )
+            
+            valid_move = not hit_mine and end_pos != start_pos
+            results[direction] = (end_pos, valid_move, len(gems), len(path))
+            
+            status = "✅ VALID" if valid_move else "❌ INVALID"
+            print(f"[NIKHIL C4] {status}: {start_pos} → {end_pos}, Gems: {len(gems)}")
+        
+        print(f"{'='*70}")
+        print(f"[NIKHIL C4] ✅ All 8 directions tested\n")
+        
+        return results
 
 
 # ==================== GAME CODE ====================
@@ -421,30 +501,22 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        NIKHIL'S TEST (C3): Test gem collection mechanics
-        TODO: Full integration in later commits
+        NIKHIL'S TEST (C4): Test all 8 directions comprehensively
+        TODO: Full integration in next commit
         """
-        # Test Nikhil's gem collection
+        # Test Nikhil's 8-direction validation
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Nikhil's ClusterConqueror (C3) - Gem Collection")
+        print("[CPU AI] Testing Nikhil's ClusterConqueror (C4) - 8 Directions")
         
-        # Test with no collected gems
-        print("\n[CPU AI] Test 1: Fresh simulation (no collected gems)")
-        for test_direction in [RIGHT, DOWN]:
-            print(f"\n[CPU AI] Direction: {test_direction}")
-            end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
-                self.ball_pos, test_direction, frozenset()
-            )
-            print(f"[CPU AI] Result: {len(gems)} gems collected")
+        # Comprehensive direction test
+        results = self.cluster_conqueror.test_all_directions(self.ball_pos)
         
-        # Test with some gems already collected
-        print("\n[CPU AI] Test 2: With already collected gems")
-        already_collected = frozenset([(3, 3)])  # Pretend we already collected this gem
-        end_pos, gems, hit_mine, path = self.cluster_conqueror.simulate_move(
-            self.ball_pos, RIGHT, already_collected
-        )
-        print(f"[CPU AI] Result: {len(gems)} NEW gems collected (skipped already collected)")
+        # Analyze results
+        valid_moves = sum(1 for _, (end, valid, gems, path_len) in results.items() if valid)
+        total_gems_available = sum(gems for _, (end, valid, gems, path_len) in results.items())
         
+        print(f"[CPU AI] 📊 Summary: {valid_moves}/8 directions valid")
+        print(f"[CPU AI] 💎 Total gems accessible: {total_gems_available}")
         print(f"{'='*70}\n")
         
         # Temporary greedy AI (will be replaced)
@@ -466,7 +538,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 7/16: Nikhil - Gem Collection]")
+        self.root.title("Inertia [Commit 8/16: Nikhil - 8-Direction Handling]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -495,7 +567,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 7/16: Nikhil - Gem Collection Mechanics (3/5) ✅",
+            text="Commit 8/16: Nikhil - 8-Direction Handling (4/5) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -582,9 +654,10 @@ class InertiaGUI:
         
         instructions = [
             ("🎮 Controls:", "#00d4ff", "bold"),
-            ("Arrow Keys / WASD", "#ffffff", "normal"),
+            ("Arrow Keys / WASD / QEZC", "#ffffff", "normal"),
             ("or", "#a8dadc", "normal"),
-            ("Click Mouse", "#ffffff", "normal")
+            ("Click Mouse", "#ffffff", "normal"),
+            ("(All 8 Directions!)", "#00d4ff", "normal")
         ]
         
         for text, color, weight in instructions:
@@ -851,7 +924,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Nikhil's Module: 3/5 commits ✅")
+               f"Nikhil's Module: 4/5 commits ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -880,16 +953,16 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 7/16 - NIKHIL: Gem Collection Mechanics")
+    print("COMMIT 8/16 - NIKHIL: Complete 8-Direction Handling")
     print("=" * 70)
-    print("✅ Gem detection along slide path")
-    print("✅ already_collected parameter handling")
-    print("✅ Only collects NEW gems (not in already_collected)")
-    print("✅ Returns frozenset of collected gems")
-    print("✅ Proper tracking through entire path")
-    print("📊 Progress: Nikhil 3/5 commits")
-    print("📊 Total Progress: 7/16 commits")
-    print("⏭️  Next: 8-direction validation (C4)")
+    print("✅ is_valid_direction() validation method")
+    print("✅ get_direction_name() for debugging")
+    print("✅ test_all_directions() comprehensive testing")
+    print("✅ DIRECTION_NAMES mapping with arrows")
+    print("✅ All 8 directions fully validated")
+    print("📊 Progress: Nikhil 4/5 commits")
+    print("📊 Total Progress: 8/16 commits")
+    print("⏭️  Next: Fallback strategies & utilities (C5)")
     print("=" * 70)
     
     root = tk.Tk()
