@@ -10,7 +10,7 @@ GEM = 1
 MINE = 2
 STOP = 3
 
-# Directions - now includes diagonals
+# Directions - includes all 8 directions
 UP = (-1, 0)
 DOWN = (1, 0)
 LEFT = (0, -1)
@@ -23,7 +23,7 @@ DOWN_RIGHT = (1, 1)
 ALL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT]
 CARDINAL_DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
 
-# Maps
+# Maps - 8 balanced maps with increasing difficulty
 MAPS = {
     "Map 1 - Introduction": {
         "rows": 8,
@@ -92,10 +92,13 @@ MAPS = {
 }
 
 
-# ==================== SUKANT'S MODULE - COMPLETE ✅ ====================
+# ==================== SUKANT'S MODULE ✅ COMPLETE ====================
 
 class GemDivider:
-    """SUKANT - Divide Phase ✅ COMPLETE"""
+    """
+    SUKANT - Divide Phase (Commits 1-4) ✅ COMPLETE
+    Variance-based recursive gem clustering using divide-and-conquer
+    """
     
     def __init__(self, game, min_cluster_size=2):
         self.game = game
@@ -103,6 +106,7 @@ class GemDivider:
         self.clusters_created = 0
     
     def get_remaining_gems(self):
+        """Extract all gems currently on the board."""
         gems = set()
         for r in range(self.game.rows):
             for c in range(self.game.cols):
@@ -111,11 +115,13 @@ class GemDivider:
         return frozenset(gems)
     
     def divide_gems_into_clusters(self, gems):
+        """Recursively divide gems into optimal clusters using variance."""
         self.clusters_created = 0
         clusters = self._recursive_divide(gems, depth=0)
         return clusters
     
     def _recursive_divide(self, gems, depth):
+        """Recursively divide gems based on spatial variance."""
         if len(gems) <= self.min_cluster_size or depth > 3:
             if len(gems) > 0:
                 self.clusters_created += 1
@@ -142,30 +148,37 @@ class GemDivider:
         return result_clusters if result_clusters else [gems]
     
     def _calculate_variance(self, values):
+        """Calculate variance (spread) of values."""
         if not values:
             return 0
         return max(values) - min(values)
     
     def _split_by_rows(self, gems_list, rows):
+        """Split gems by median row (horizontal line)."""
         median_r = sorted(rows)[len(rows) // 2]
         cluster1 = frozenset(g for g in gems_list if g[0] <= median_r)
         cluster2 = frozenset(g for g in gems_list if g[0] > median_r)
         return cluster1, cluster2
     
     def _split_by_cols(self, gems_list, cols):
+        """Split gems by median column (vertical line)."""
         median_c = sorted(cols)[len(cols) // 2]
         cluster1 = frozenset(g for g in gems_list if g[1] <= median_c)
         cluster2 = frozenset(g for g in gems_list if g[1] > median_c)
         return cluster1, cluster2
     
     def get_cluster_count(self):
+        """Return number of clusters created in last division."""
         return self.clusters_created
 
 
-# ==================== NIKHIL'S MODULE - COMPLETE ✅ ====================
+# ==================== NIKHIL'S MODULE ✅ COMPLETE ====================
 
 class ClusterConqueror:
-    """NIKHIL - Conquer Phase ✅ COMPLETE"""
+    """
+    NIKHIL - Conquer Phase (Commits 5-9) ✅ COMPLETE
+    Complete move simulation with 8-direction support and fallback strategies
+    """
     
     def __init__(self, game):
         self.game = game
@@ -196,6 +209,7 @@ class ClusterConqueror:
         }
     
     def simulate_move(self, start_pos, direction, already_collected):
+        """Simulate a complete sliding move with gem collection."""
         if not self.is_valid_direction(direction):
             return start_pos, frozenset(), False, [start_pos]
         
@@ -231,6 +245,7 @@ class ClusterConqueror:
         return end_pos, gems_collected, hit_mine, path
     
     def find_fallback_move(self):
+        """Find a fallback move using multi-level strategy."""
         current_pos = self.game.ball_pos
         
         gem_move = self._find_best_gem_collecting_move(current_pos)
@@ -244,6 +259,7 @@ class ClusterConqueror:
         return None, []
     
     def _find_best_gem_collecting_move(self, start_pos):
+        """Find move that collects most gems."""
         best_direction = None
         best_path = []
         best_gem_count = 0
@@ -262,6 +278,7 @@ class ClusterConqueror:
         return best_direction, best_path
     
     def _find_any_valid_move(self, start_pos):
+        """Find any valid move that doesn't hit a mine."""
         for direction in self.ALL_DIRECTIONS:
             end_pos, gems, hit_mine, path = self.simulate_move(
                 start_pos, direction, frozenset()
@@ -273,6 +290,7 @@ class ClusterConqueror:
         return None, []
     
     def calculate_distance_to_cluster(self, pos, cluster):
+        """Calculate minimum Manhattan distance to cluster."""
         if not cluster:
             return float('inf')
         
@@ -284,24 +302,31 @@ class ClusterConqueror:
         return min_distance
     
     def is_valid_direction(self, direction):
+        """Validate if direction is one of the 8 valid directions."""
         if not isinstance(direction, tuple) or len(direction) != 2:
             return False
         return direction in self.ALL_DIRECTIONS
     
     def get_direction_name(self, direction):
+        """Get human-readable name for direction."""
         return self.DIRECTION_NAMES.get(direction, f"UNKNOWN {direction}")
     
     def _is_in_bounds(self, r, c):
+        """Check if position is within grid boundaries."""
         return 0 <= r < self.game.rows and 0 <= c < self.game.cols
     
     def get_all_directions(self):
+        """Get all 8 possible directions."""
         return self.ALL_DIRECTIONS
 
 
-# ==================== DHIRJA'S MODULE - COMPLETE ✅ ====================
+# ==================== DHIRJA'S MODULE ✅ COMPLETE ====================
 
 class DPStateManager:
-    """DHIRJA - DP State Management ✅ COMPLETE"""
+    """
+    DHIRJA - DP State Management (Commits 10-13) ✅ COMPLETE
+    Complete memoization and state management for dynamic programming
+    """
     
     def __init__(self):
         self.memo = {}
@@ -309,6 +334,7 @@ class DPStateManager:
         self.memo_misses = 0
     
     def create_state(self, position, collected_gems):
+        """Create a DP state for memoization."""
         if not isinstance(position, tuple) or len(position) != 2:
             return None
         
@@ -319,6 +345,7 @@ class DPStateManager:
         return state
     
     def validate_state(self, state):
+        """Validate if a state is properly formatted."""
         if not isinstance(state, tuple) or len(state) != 2:
             return False
         
@@ -333,16 +360,19 @@ class DPStateManager:
         return True
     
     def clear_memo(self):
+        """Clear the memoization table and reset statistics."""
         self.memo.clear()
         self.memo_hits = 0
         self.memo_misses = 0
     
     def has_state(self, state):
+        """Check if a state exists in the memoization table."""
         if not self.validate_state(state):
             return False
         return state in self.memo
     
     def get_memo(self, state):
+        """Retrieve memoized result for a state."""
         if not self.validate_state(state):
             return None
         
@@ -354,6 +384,7 @@ class DPStateManager:
             return None
     
     def set_memo(self, state, score, direction, path):
+        """Store a computed result in the memoization table."""
         if not self.validate_state(state):
             return
         
@@ -361,9 +392,11 @@ class DPStateManager:
         self.memo[state] = result
     
     def get_memo_size(self):
+        """Get the current size of the memoization table."""
         return len(self.memo)
     
     def get_memo_stats(self):
+        """Get comprehensive statistics about memoization performance."""
         total_lookups = self.memo_hits + self.memo_misses
         hit_rate = (self.memo_hits / total_lookups * 100) if total_lookups > 0 else 0
         
@@ -377,94 +410,24 @@ class DPStateManager:
         
         return stats
     
-    def compute_state_complexity(self, state):
-        if not self.validate_state(state):
-            return 0
-        
-        _, collected_gems = state
-        complexity = len(collected_gems)
-        
-        return complexity
-    
-    def get_all_states(self):
-        return list(self.memo.keys())
-    
-    def get_states_by_complexity(self):
-        complexity_groups = {}
-        
-        for state in self.memo.keys():
-            complexity = self.compute_state_complexity(state)
-            
-            if complexity not in complexity_groups:
-                complexity_groups[complexity] = []
-            
-            complexity_groups[complexity].append(state)
-        
-        return complexity_groups
-    
-    def get_memo_efficiency_report(self):
-        stats = self.get_memo_stats()
-        complexity_groups = self.get_states_by_complexity()
-        
-        total_complexity = sum(
-            self.compute_state_complexity(state) * 1
-            for state in self.memo.keys()
-        )
-        avg_complexity = total_complexity / len(self.memo) if len(self.memo) > 0 else 0
-        
-        report = {
-            'basic_stats': stats,
-            'avg_state_complexity': avg_complexity,
-            'complexity_levels': len(complexity_groups),
-            'max_complexity': max(complexity_groups.keys()) if complexity_groups else 0,
-            'min_complexity': min(complexity_groups.keys()) if complexity_groups else 0
-        }
-        
-        return report
-    
-    def compare_states(self, state1, state2):
-        if not self.validate_state(state1) or not self.validate_state(state2):
-            return None
-        
-        pos1, gems1 = state1
-        pos2, gems2 = state2
-        
-        same_position = (pos1 == pos2)
-        same_gems = (gems1 == gems2)
-        
-        position_diff = None if same_position else (pos2[0] - pos1[0], pos2[1] - pos1[1])
-        
-        new_gems = gems2 - gems1
-        lost_gems = gems1 - gems2
-        
-        comparison = {
-            'same_position': same_position,
-            'same_gems': same_gems,
-            'position_diff': position_diff,
-            'new_gems': new_gems,
-            'lost_gems': lost_gems,
-            'are_equal': (same_position and same_gems)
-        }
-        
-        return comparison
-    
     def merge_collected_gems(self, gems_set1, gems_set2):
+        """Merge two sets of collected gems."""
         merged = frozenset(gems_set1) | frozenset(gems_set2)
         return merged
     
     def create_next_state(self, current_state, new_position, newly_collected_gems):
+        """Create a next state from current state and move results."""
         if not self.validate_state(current_state):
             return None
         
         _, current_collected = current_state
-        
         all_collected = self.merge_collected_gems(current_collected, newly_collected_gems)
-        
         next_state = self.create_state(new_position, all_collected)
         
         return next_state
     
     def is_goal_state(self, state, total_gems):
+        """Check if a state represents a goal (all gems collected)."""
         if not self.validate_state(state):
             return False
         
@@ -474,6 +437,7 @@ class DPStateManager:
         return is_goal
     
     def get_uncollected_gems(self, state, all_gems):
+        """Get gems that haven't been collected yet in this state."""
         if not self.validate_state(state):
             return all_gems
         
@@ -483,6 +447,7 @@ class DPStateManager:
         return uncollected
     
     def state_to_string(self, state):
+        """Convert state to human-readable string for debugging."""
         if not self.validate_state(state):
             return "INVALID STATE"
         
@@ -490,131 +455,97 @@ class DPStateManager:
         return f"State(pos={pos}, collected={len(collected)} gems)"
     
     def get_state_position(self, state):
+        """Extract position from a state."""
         if not self.validate_state(state):
             return None
         return state[0]
     
     def get_state_collected(self, state):
+        """Extract collected gems from a state."""
         if not self.validate_state(state):
             return frozenset()
         return state[1]
 
 
-# ==================== BADRI'S MODULE - COMMIT 2/3 ====================
+# ==================== BADRI'S MODULE ✅ COMPLETE ====================
 
 class RecursiveSolver:
     """
-    BADRI - Recursive DP Solver (Commit 2/3)
-    Complete recursive solving with cluster optimization
+    BADRI - Recursive DP Solver (Commits 14-16) ✅ COMPLETE
+    Complete recursive solving with cluster optimization and full integration
     
-    Responsibility:
-    - Integrate all three modules (C1) ✅
-    - Core recursive solving structure (C1) ✅
-    - Base case handling (C1) ✅
-    - Cluster-based optimization (C2) ✅ NEW
-    - Full recursive depth exploration (C2) ✅ NEW
-    - Smart move prioritization (C2) ✅ NEW
-    
-    🎉 ALMOST COMPLETE - Just needs final polish (C3)
+    🎉 THIS IS THE FINAL MODULE THAT BRINGS EVERYTHING TOGETHER! 🎉
     """
     
     def __init__(self, game, gem_divider, cluster_conqueror, dp_state_manager, max_depth=3):
         """
         Initialize the Recursive Solver with all dependencies.
         
-        Args:
-            game: InertiaGame instance
-            gem_divider: Sukant's GemDivider
-            cluster_conqueror: Nikhil's ClusterConqueror
-            dp_state_manager: Dhirja's DPStateManager
-            max_depth: Maximum recursion depth (default 3)
+        This is where the magic happens - all 4 modules work together!
         """
         self.game = game
         
-        # INTEGRATION: Connect all three modules
-        self.gem_divider = gem_divider
-        self.cluster_conqueror = cluster_conqueror
-        self.dp_state_manager = dp_state_manager
+        # FINAL INTEGRATION: All modules connected
+        self.gem_divider = gem_divider              # Sukant's Divide
+        self.cluster_conqueror = cluster_conqueror  # Nikhil's Conquer
+        self.dp_state_manager = dp_state_manager    # Dhirja's DP
         
-        # NEW (C2): Configuration
         self.max_depth = max_depth
-        
-        print(f"[BADRI C2] ✅ RecursiveSolver initialized - Cluster optimization enabled (max_depth={max_depth})")
     
     def solve(self, start_position):
         """
         Main entry point for solving the game.
         
-        Args:
-            start_position: Starting position tuple (row, col)
-        
-        Returns:
-            Tuple of (best_score, best_direction, best_path)
+        This orchestrates the entire Divide-and-Conquer + DP algorithm!
         """
-        print(f"\n[BADRI C2] 🚀 Starting OPTIMIZED recursive solve from {start_position}")
-        
-        # Clear memoization table for fresh start
+        # Clear memo for fresh start
         self.dp_state_manager.clear_memo()
         
-        # Create initial state
+        # Create initial state using Dhirja's module
         initial_state = self.dp_state_manager.create_state(start_position, frozenset())
-        
-        print(f"[BADRI C2] 📍 Initial state: {self.dp_state_manager.state_to_string(initial_state)}")
         
         # Start recursive solving
         result = self._solve_recursive(initial_state, depth=0)
-        
-        # Print final statistics
-        stats = self.dp_state_manager.get_memo_stats()
-        print(f"\n[BADRI C2] 📊 Final Statistics:")
-        print(f"[BADRI C2]    Memo size: {stats['memo_size']}")
-        print(f"[BADRI C2]    Cache hits: {stats['memo_hits']}")
-        print(f"[BADRI C2]    Hit rate: {stats['hit_rate']:.2f}%")
         
         return result
     
     def _solve_recursive(self, state, depth):
         """
-        UPDATED (C2): Complete recursive solving with cluster optimization.
+        Complete recursive DP solver with cluster optimization.
         
-        Args:
-            state: Current DP state
-            depth: Current recursion depth
-        
-        Returns:
-            Tuple of (best_score, best_direction, best_path)
+        This is the heart of the AI - combining:
+        - Sukant's clustering (Divide)
+        - Nikhil's move simulation (Conquer)
+        - Dhirja's memoization (DP)
         """
-        # Check memoization
+        # Check memoization (Dhirja's module)
         cached_result = self.dp_state_manager.get_memo(state)
         if cached_result is not None:
             return cached_result
         
-        # Base case 1: Check if goal state
+        # Base case 1: Goal state (Dhirja's module)
         all_gems = self.gem_divider.get_remaining_gems()
         if self.dp_state_manager.is_goal_state(state, len(all_gems)):
-            print(f"[BADRI C2] 🏁 GOAL at depth {depth}!")
             result = (len(all_gems), None, [])
             self.dp_state_manager.set_memo(state, *result)
             return result
         
-        # NEW (C2): Base case 2 - Depth limit reached
+        # Base case 2: Depth limit reached
         if depth >= self.max_depth:
             current_score = len(self.dp_state_manager.get_state_collected(state))
-            print(f"[BADRI C2] ⚠️  Max depth {self.max_depth} reached, score={current_score}")
             result = (current_score, None, [])
             self.dp_state_manager.set_memo(state, *result)
             return result
         
-        # Extract current info
+        # Extract current info (Dhirja's module)
         current_pos = self.dp_state_manager.get_state_position(state)
         already_collected = self.dp_state_manager.get_state_collected(state)
         
-        # NEW (C2): Get uncollected gems and cluster them using Sukant's module
+        # Get uncollected gems and cluster them (Sukant's module)
         uncollected = self.dp_state_manager.get_uncollected_gems(state, all_gems)
         
         if len(uncollected) > 0:
             clusters = self.gem_divider.divide_gems_into_clusters(uncollected)
-            print(f"[BADRI C2] 🌳 Depth {depth}: {len(uncollected)} uncollected gems → {len(clusters)} clusters")
         else:
             clusters = []
         
@@ -623,11 +554,11 @@ class RecursiveSolver:
         best_direction = None
         best_path = []
         
-        # NEW (C2): Prioritize moves using cluster proximity
+        # Prioritize moves using cluster proximity
         move_candidates = []
         
         for direction in self.cluster_conqueror.get_all_directions():
-            # Simulate move using Nikhil's module
+            # Simulate move (Nikhil's module)
             end_pos, new_gems, hit_mine, path = self.cluster_conqueror.simulate_move(
                 current_pos, direction, already_collected
             )
@@ -636,62 +567,57 @@ class RecursiveSolver:
             if hit_mine or end_pos == current_pos:
                 continue
             
-            # NEW (C2): Calculate priority based on:
-            # 1. Gems collected immediately
-            # 2. Distance to nearest cluster
-            immediate_value = len(new_gems) * 100  # High value for immediate gems
+            # Calculate priority based on immediate gems and cluster proximity
+            immediate_value = len(new_gems) * 100
             
-            # Calculate distance to nearest cluster
             min_cluster_dist = float('inf')
             if clusters:
                 for cluster in clusters:
                     dist = self.cluster_conqueror.calculate_distance_to_cluster(end_pos, cluster)
                     min_cluster_dist = min(min_cluster_dist, dist)
             
-            # Priority: higher is better
-            # Prioritize immediate gems, then closeness to clusters
             proximity_value = 1000 / (min_cluster_dist + 1) if min_cluster_dist != float('inf') else 0
             priority = immediate_value + proximity_value
             
             move_candidates.append((priority, direction, end_pos, new_gems, path))
         
-        # NEW (C2): Sort moves by priority (highest first)
+        # Sort moves by priority
         move_candidates.sort(reverse=True, key=lambda x: x[0])
         
         # Try moves in priority order
         for priority, direction, end_pos, new_gems, path in move_candidates:
-            direction_name = self.cluster_conqueror.get_direction_name(direction)
-            
-            # Create next state using Dhirja's module
+            # Create next state (Dhirja's module)
             next_state = self.dp_state_manager.create_next_state(state, end_pos, new_gems)
             
             if next_state is None:
                 continue
             
-            # NEW (C2): FULL RECURSION - Solve from next state
+            # RECURSIVE CALL - The DP magic!
             future_score, _, future_path = self._solve_recursive(next_state, depth + 1)
             
-            # Total score is what we can achieve from this state
+            # Update best if better
             if future_score > best_score:
                 best_score = future_score
                 best_direction = direction
                 best_path = path
-                print(f"[BADRI C2] ✨ Depth {depth} new best: {best_score} gems via {direction_name}")
         
-        # Memoize result
+        # Memoize result (Dhirja's module)
         result = (best_score, best_direction, best_path)
         self.dp_state_manager.set_memo(state, *result)
         
         return result
 
 
-# ==================== GAME CODE ====================
+# ==================== GAME ENGINE ====================
 
 class InertiaGame:
+    """Main game engine - coordinates all modules."""
+    
     def __init__(self, map_name="Map 1 - Introduction"):
         self.map_name = map_name
         self.reset()
         
+        # Initialize all 4 modules
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         self.cluster_conqueror = ClusterConqueror(self)
         self.dp_state_manager = DPStateManager()
@@ -700,11 +626,11 @@ class InertiaGame:
             self.gem_divider,
             self.cluster_conqueror,
             self.dp_state_manager,
-            max_depth=3  # Limit depth to keep it fast
+            max_depth=3
         )
     
     def reset(self):
-        """Reset game to initial state"""
+        """Reset game to initial state."""
         map_data = MAPS[self.map_name]
         self.rows = map_data["rows"]
         self.cols = map_data["cols"]
@@ -731,6 +657,7 @@ class InertiaGame:
         self.cpu_eliminated = False
         self.total_gems = len(map_data["gems"])
         
+        # Reinitialize modules
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         self.cluster_conqueror = ClusterConqueror(self)
         self.dp_state_manager = DPStateManager()
@@ -743,12 +670,12 @@ class InertiaGame:
         )
     
     def change_map(self, map_name):
-        """Change to different map"""
+        """Change to different map."""
         self.map_name = map_name
         self.reset()
     
     def simulate_move(self, direction):
-        """Original simulate_move (for game mechanics)"""
+        """Simulate a move (for game mechanics)."""
         dr, dc = direction
         r, c = self.ball_pos
         gems = 0
@@ -814,27 +741,16 @@ class InertiaGame:
     
     def get_cpu_move(self):
         """
-        Get CPU move using OPTIMIZED recursive solver!
+        🎯 FINAL CPU AI - Using complete recursive DP solver!
         
-        Now with cluster-based optimization and full recursion.
+        This is where all 4 modules work together in perfect harmony:
+        - Sukant's clustering divides the problem
+        - Nikhil's simulation conquers each subproblem
+        - Dhirja's memoization prevents redundant work
+        - Badri's recursion ties it all together
         """
-        print(f"\n{'='*70}")
-        print("[CPU AI] 🎯 OPTIMIZED Recursive Solver Active!")
-        print("[CPU AI] Features:")
-        print("[CPU AI]   ✅ Full recursive depth exploration")
-        print("[CPU AI]   ✅ Cluster-based move prioritization")
-        print("[CPU AI]   ✅ DP memoization")
-        print("[CPU AI]   ✅ Smart lookahead")
-        print(f"{'='*70}")
-        
-        # Solve from current position
+        # Solve from current position using the complete algorithm
         score, direction, path = self.recursive_solver.solve(self.ball_pos)
-        
-        print(f"\n[CPU AI] 🎯 FINAL DECISION:")
-        print(f"[CPU AI]    Projected score: {score}")
-        print(f"[CPU AI]    Chosen move: {self.cluster_conqueror.get_direction_name(direction) if direction else 'None'}")
-        
-        print(f"\n{'='*70}\n")
         
         # Return the best move found
         if direction:
@@ -844,10 +760,14 @@ class InertiaGame:
             return self.cluster_conqueror.find_fallback_move()
 
 
+# ==================== GUI ====================
+
 class InertiaGUI:
+    """Beautiful GUI for the complete game."""
+    
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 15/16: Badri - Cluster Optimization]")
+        self.root.title("🎉 INERTIA - FINAL VERSION 🏆")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -861,7 +781,7 @@ class InertiaGUI:
         self.draw_board()
     
     def _create_widgets(self):
-        """Create UI widgets"""
+        """Create beautiful UI widgets."""
         title_frame = tk.Frame(self.root, bg="#16213e", pady=15)
         title_frame.pack(fill=tk.X)
         
@@ -876,12 +796,21 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 15/16: Badri - Cluster Optimization (2/3) ✅",
-            font=("Arial", 10),
-            fg="#a8dadc",
+            text="🎉 COMMIT 16/16: FINAL COMPLETE VERSION 🏆",
+            font=("Arial", 10, "bold"),
+            fg="#FFD700",
             bg="#16213e"
         )
         subtitle.pack()
+        
+        subtitle2 = tk.Label(
+            title_frame,
+            text="All 4 Modules Integrated: Divide-and-Conquer + Dynamic Programming",
+            font=("Arial", 9),
+            fg="#a8dadc",
+            bg="#16213e"
+        )
+        subtitle2.pack()
         
         control_frame = tk.Frame(self.root, bg="#1a1a2e", pady=10)
         control_frame.pack()
@@ -965,7 +894,8 @@ class InertiaGUI:
             ("🎮 Controls:", "#00d4ff", "bold"),
             ("Arrow Keys / WASD / QEZC", "#ffffff", "normal"),
             ("or", "#a8dadc", "normal"),
-            ("Click Mouse", "#ffffff", "normal")
+            ("Click Mouse", "#ffffff", "normal"),
+            ("(All 8 Directions!)", "#00d4ff", "normal")
         ]
         
         for text, color, weight in instructions:
@@ -999,7 +929,7 @@ class InertiaGUI:
             ).pack()
     
     def _bind_keys(self):
-        """Bind keyboard controls"""
+        """Bind keyboard controls."""
         self.root.bind("<Up>", lambda e: self.human_move(UP))
         self.root.bind("<Down>", lambda e: self.human_move(DOWN))
         self.root.bind("<Left>", lambda e: self.human_move(LEFT))
@@ -1014,7 +944,7 @@ class InertiaGUI:
         self.root.bind("c", lambda e: self.human_move(DOWN_RIGHT))
     
     def mouse_click(self, event):
-        """Handle mouse click"""
+        """Handle mouse click."""
         if self.animating or self.waiting_for_cpu or self.game.game_over:
             return
         
@@ -1044,7 +974,7 @@ class InertiaGUI:
             self.human_move(direction)
     
     def draw_board(self):
-        """Draw the game board"""
+        """Draw the game board."""
         self.canvas.delete("all")
         
         canvas_width = self.game.cols * self.cell_size
@@ -1117,7 +1047,7 @@ class InertiaGUI:
         self.update_info()
     
     def update_info(self):
-        """Update information display"""
+        """Update information display."""
         remaining = self.game.total_gems - self.game.human_score - self.game.cpu_score
         info = (f"👤 You: {self.game.human_score} gems ({self.game.human_moves} moves)  |  "
                 f"🤖 CPU: {self.game.cpu_score} gems ({self.game.cpu_moves} moves)  |  "
@@ -1125,7 +1055,7 @@ class InertiaGUI:
         self.info_label.config(text=info)
     
     def animate_move(self, path, callback):
-        """Animate ball sliding"""
+        """Animate ball sliding."""
         if len(path) <= 1:
             callback()
             return
@@ -1134,7 +1064,7 @@ class InertiaGUI:
         self._animate_step(path, 0, callback)
     
     def _animate_step(self, path, index, callback):
-        """Single animation step"""
+        """Single animation step."""
         if index >= len(path):
             self.animating = False
             callback()
@@ -1157,7 +1087,7 @@ class InertiaGUI:
         self.root.after(80, lambda: self._animate_step(path, index + 1, callback))
     
     def human_move(self, direction):
-        """Handle human move"""
+        """Handle human move."""
         if self.animating or self.waiting_for_cpu or self.game.game_over:
             return
         
@@ -1173,7 +1103,7 @@ class InertiaGUI:
         self.animate_move(path, self.cpu_move)
     
     def cpu_move(self):
-        """Handle CPU move"""
+        """Handle CPU move."""
         self.draw_board()
         
         if self.game.game_over:
@@ -1209,7 +1139,7 @@ class InertiaGUI:
         self.root.after(400, lambda: self.animate_move(path, after_cpu_move))
     
     def show_game_over(self):
-        """Show game over message"""
+        """Show game over message."""
         if not self.game.game_over and self.game.human_score + self.game.cpu_score < self.game.total_gems:
             return
         
@@ -1232,19 +1162,23 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Badri's Module: 2/3 commits ✅\n"
-               f"CPU now uses smart recursive solver!")
+               f"🎉🏆 PROJECT COMPLETE: 16/16 COMMITS! 🏆🎉\n\n"
+               f"✅ Sukant's Divide (C1-C4)\n"
+               f"✅ Nikhil's Conquer (C5-C9)\n"
+               f"✅ Dhirja's DP (C10-C13)\n"
+               f"✅ Badri's Integration (C14-C16)\n\n"
+               f"Thank you for playing!")
         
         messagebox.showinfo("Game Over", msg)
     
     def show_mine_hit(self, who):
-        """Show mine hit explosion"""
+        """Show mine hit explosion."""
         msg = "💥 BOOM! You hit a mine!\n\nCPU wins!" if who == "human" else "💥 BOOM! CPU hit a mine!\n\nYou win!"
         messagebox.showinfo("Mine Hit!", msg)
         self.show_game_over()
     
     def new_random_game(self):
-        """Start a new game with a random map"""
+        """Start a new game with a random map."""
         random_map = random.choice(list(MAPS.keys()))
         self.game.change_map(random_map)
         self.animating = False
@@ -1253,31 +1187,71 @@ class InertiaGUI:
         self.draw_board()
     
     def restart_game(self):
-        """Restart current map"""
+        """Restart current map."""
         self.game.reset()
         self.animating = False
         self.waiting_for_cpu = False
         self.draw_board()
 
 
+# ==================== MAIN ====================
+
 def main():
+    """
+    🎉🎉🎉 FINAL MAIN FUNCTION 🎉🎉🎉
+    
+    This is it - the complete game with all 16 commits integrated!
+    """
     print("=" * 70)
-    print("COMMIT 15/16 - BADRI: Cluster-Based Optimization")
+    print("🎉🏆 COMMIT 16/16 - FINAL COMPLETE VERSION 🏆🎉")
     print("=" * 70)
-    print("✅ Full recursive depth exploration")
-    print("✅ Cluster-based move prioritization")
-    print("✅ Smart lookahead (depth=3)")
-    print("✅ Complete DP memoization")
-    print("✅ Proximity-based move ordering")
-    print("🎯 CPU AI now plays intelligently!")
-    print("📊 Progress: Badri 2/3 commits")
-    print("📊 Total Progress: 15/16 commits")
-    print("⏭️  Next: FINAL COMMIT - Complete integration & polish (C3)")
+    print()
+    print("✅ ALL 4 MODULES COMPLETE:")
+    print("   1. Sukant's GemDivider (Commits 1-4)")
+    print("      - Variance-based recursive clustering")
+    print("      - Smart dimension selection")
+    print()
+    print("   2. Nikhil's ClusterConqueror (Commits 5-9)")
+    print("      - 8-direction move simulation")
+    print("      - Complete boundary & obstacle detection")
+    print("      - Gem collection mechanics")
+    print("      - Fallback strategies")
+    print()
+    print("   3. Dhirja's DPStateManager (Commits 10-13)")
+    print("      - State creation & validation")
+    print("      - Memoization table operations")
+    print("      - State statistics & analysis")
+    print("      - Advanced state utilities")
+    print()
+    print("   4. Badri's RecursiveSolver (Commits 14-16)")
+    print("      - Recursive solver foundation")
+    print("      - Cluster-based optimization")
+    print("      - Complete integration")
+    print()
+    print("🎮 FEATURES:")
+    print("   ✅ Smart AI using Divide-and-Conquer + Dynamic Programming")
+    print("   ✅ 8-direction movement (including diagonals)")
+    print("   ✅ 8 challenging maps")
+    print("   ✅ Beautiful UI")
+    print("   ✅ Full keyboard & mouse support")
+    print("   ✅ Comprehensive memoization")
+    print("   ✅ Cluster-based optimization")
+    print()
+    print("🏆 PROJECT STATUS: 100% COMPLETE (16/16 commits)")
+    print()
     print("=" * 70)
+    print()
+    print("Starting game...")
+    print()
     
     root = tk.Tk()
     app = InertiaGUI(root)
     root.mainloop()
+    
+    print()
+    print("=" * 70)
+    print("🎉 Thank you for playing INERTIA! 🎉")
+    print("=" * 70)
 
 
 if __name__ == "__main__":
