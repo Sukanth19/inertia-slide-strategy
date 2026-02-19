@@ -298,36 +298,17 @@ class ClusterConqueror:
         return self.ALL_DIRECTIONS
 
 
-# ==================== DHIRJA'S MODULE - COMMIT 4/4 ✅ COMPLETE ====================
+# ==================== DHIRJA'S MODULE - COMPLETE ✅ ====================
 
 class DPStateManager:
-    """
-    DHIRJA - DP State Management (Commit 4/4) ✅ COMPLETE
-    Advanced state utilities and complete functionality
-    
-    Complete Functionality:
-    - Define DP state format (C1) ✅
-    - Create and validate states (C1) ✅
-    - Store/retrieve memoized results (C2) ✅
-    - Track memo hits/misses (C2) ✅
-    - Comprehensive statistics (C3) ✅
-    - Performance analysis (C3) ✅
-    - Advanced state utilities (C4) ✅ NEW
-    - State transitions (C4) ✅ NEW
-    - State comparison (C4) ✅ NEW
-    
-    🎉 MODULE COMPLETE - Ready for Badri's recursive solver!
-    """
+    """DHIRJA - DP State Management ✅ COMPLETE"""
     
     def __init__(self):
-        """Initialize the DP State Manager."""
         self.memo = {}
         self.memo_hits = 0
         self.memo_misses = 0
-        print("[DHIRJA C4] 🎉 DPStateManager FULLY IMPLEMENTED - All features complete")
     
     def create_state(self, position, collected_gems):
-        """Create a DP state for memoization."""
         if not isinstance(position, tuple) or len(position) != 2:
             return None
         
@@ -338,7 +319,6 @@ class DPStateManager:
         return state
     
     def validate_state(self, state):
-        """Validate if a state is properly formatted."""
         if not isinstance(state, tuple) or len(state) != 2:
             return False
         
@@ -353,19 +333,16 @@ class DPStateManager:
         return True
     
     def clear_memo(self):
-        """Clear the memoization table and reset statistics."""
         self.memo.clear()
         self.memo_hits = 0
         self.memo_misses = 0
     
     def has_state(self, state):
-        """Check if a state exists in the memoization table."""
         if not self.validate_state(state):
             return False
         return state in self.memo
     
     def get_memo(self, state):
-        """Retrieve memoized result for a state."""
         if not self.validate_state(state):
             return None
         
@@ -377,7 +354,6 @@ class DPStateManager:
             return None
     
     def set_memo(self, state, score, direction, path):
-        """Store a computed result in the memoization table."""
         if not self.validate_state(state):
             return
         
@@ -385,11 +361,9 @@ class DPStateManager:
         self.memo[state] = result
     
     def get_memo_size(self):
-        """Get the current size of the memoization table."""
         return len(self.memo)
     
     def get_memo_stats(self):
-        """Get comprehensive statistics about memoization performance."""
         total_lookups = self.memo_hits + self.memo_misses
         hit_rate = (self.memo_hits / total_lookups * 100) if total_lookups > 0 else 0
         
@@ -404,7 +378,6 @@ class DPStateManager:
         return stats
     
     def compute_state_complexity(self, state):
-        """Compute complexity of a state."""
         if not self.validate_state(state):
             return 0
         
@@ -414,11 +387,9 @@ class DPStateManager:
         return complexity
     
     def get_all_states(self):
-        """Retrieve all states currently in the memo table."""
         return list(self.memo.keys())
     
     def get_states_by_complexity(self):
-        """Group states by their complexity level."""
         complexity_groups = {}
         
         for state in self.memo.keys():
@@ -432,7 +403,6 @@ class DPStateManager:
         return complexity_groups
     
     def get_memo_efficiency_report(self):
-        """Generate a comprehensive efficiency report."""
         stats = self.get_memo_stats()
         complexity_groups = self.get_states_by_complexity()
         
@@ -453,24 +423,7 @@ class DPStateManager:
         return report
     
     def compare_states(self, state1, state2):
-        """
-        NEW (C4): Compare two states and return their differences.
-        
-        Useful for debugging and understanding state transitions.
-        
-        Args:
-            state1: First state
-            state2: Second state
-        
-        Returns:
-            Dict with comparison results:
-            - same_position: bool
-            - same_gems: bool
-            - position_diff: tuple or None
-            - gems_diff: set of gems that differ
-        """
         if not self.validate_state(state1) or not self.validate_state(state2):
-            print("[DHIRJA C4] ⚠️  Invalid state(s) for comparison")
             return None
         
         pos1, gems1 = state1
@@ -481,9 +434,7 @@ class DPStateManager:
         
         position_diff = None if same_position else (pos2[0] - pos1[0], pos2[1] - pos1[1])
         
-        # Gems only in state2 (newly collected)
         new_gems = gems2 - gems1
-        # Gems only in state1 (should not happen in valid transitions)
         lost_gems = gems1 - gems2
         
         comparison = {
@@ -495,111 +446,43 @@ class DPStateManager:
             'are_equal': (same_position and same_gems)
         }
         
-        print(f"[DHIRJA C4] 🔍 State comparison:")
-        print(f"[DHIRJA C4]    Same position: {same_position}")
-        print(f"[DHIRJA C4]    Same gems: {same_gems}")
-        print(f"[DHIRJA C4]    New gems collected: {len(new_gems)}")
-        
         return comparison
     
     def merge_collected_gems(self, gems_set1, gems_set2):
-        """
-        NEW (C4): Merge two sets of collected gems.
-        
-        Args:
-            gems_set1: First set of gems (set or frozenset)
-            gems_set2: Second set of gems (set or frozenset)
-        
-        Returns:
-            frozenset: Union of both gem sets
-        """
         merged = frozenset(gems_set1) | frozenset(gems_set2)
-        print(f"[DHIRJA C4] 🔗 Merged gems: {len(gems_set1)} + {len(gems_set2)} = {len(merged)}")
         return merged
     
     def create_next_state(self, current_state, new_position, newly_collected_gems):
-        """
-        NEW (C4): Create a next state from current state and move results.
-        
-        This is a critical helper for state transitions in the DP recursion.
-        
-        Args:
-            current_state: Current state tuple
-            new_position: Position after move
-            newly_collected_gems: Gems collected in this move
-        
-        Returns:
-            New state tuple
-        """
         if not self.validate_state(current_state):
-            print("[DHIRJA C4] ⚠️  Invalid current state")
             return None
         
         _, current_collected = current_state
         
-        # Merge current collected gems with newly collected gems
         all_collected = self.merge_collected_gems(current_collected, newly_collected_gems)
         
-        # Create new state
         next_state = self.create_state(new_position, all_collected)
-        
-        print(f"[DHIRJA C4] ➡️  State transition: {self.get_state_position(current_state)} → {new_position}")
         
         return next_state
     
     def is_goal_state(self, state, total_gems):
-        """
-        NEW (C4): Check if a state represents a goal (all gems collected).
-        
-        Args:
-            state: State to check
-            total_gems: Total number of gems in the level
-        
-        Returns:
-            bool: True if all gems collected
-        """
         if not self.validate_state(state):
             return False
         
         _, collected_gems = state
         is_goal = len(collected_gems) >= total_gems
         
-        if is_goal:
-            print(f"[DHIRJA C4] 🎯 GOAL STATE REACHED! All {total_gems} gems collected")
-        
         return is_goal
     
     def get_uncollected_gems(self, state, all_gems):
-        """
-        NEW (C4): Get gems that haven't been collected yet in this state.
-        
-        Args:
-            state: Current state
-            all_gems: Frozenset of all gem positions in level
-        
-        Returns:
-            frozenset: Uncollected gem positions
-        """
         if not self.validate_state(state):
             return all_gems
         
         _, collected_gems = state
         uncollected = all_gems - collected_gems
         
-        print(f"[DHIRJA C4] 💎 Uncollected gems: {len(uncollected)}/{len(all_gems)}")
-        
         return uncollected
     
     def state_to_string(self, state):
-        """
-        NEW (C4): Convert state to human-readable string for debugging.
-        
-        Args:
-            state: State to convert
-        
-        Returns:
-            str: Human-readable representation
-        """
         if not self.validate_state(state):
             return "INVALID STATE"
         
@@ -607,16 +490,182 @@ class DPStateManager:
         return f"State(pos={pos}, collected={len(collected)} gems)"
     
     def get_state_position(self, state):
-        """Extract position from a state."""
         if not self.validate_state(state):
             return None
         return state[0]
     
     def get_state_collected(self, state):
-        """Extract collected gems from a state."""
         if not self.validate_state(state):
             return frozenset()
         return state[1]
+
+
+# ==================== BADRI'S MODULE - COMMIT 1/3 ====================
+
+class RecursiveSolver:
+    """
+    BADRI - Recursive DP Solver (Commit 1/3)
+    Core recursive solver foundation
+    
+    Responsibility:
+    - Integrate all three modules (C1) ✅ NEW
+    - Core recursive solving structure (C1) ✅ NEW
+    - Base case handling (C1) ✅ NEW
+    
+    This brings everything together:
+    - Uses Sukant's GemDivider for clustering
+    - Uses Nikhil's ClusterConqueror for move simulation
+    - Uses Dhirja's DPStateManager for memoization
+    
+    TODO (next commits):
+    - Cluster-based optimization (C2)
+    - Complete integration (C3)
+    """
+    
+    def __init__(self, game, gem_divider, cluster_conqueror, dp_state_manager):
+        """
+        Initialize the Recursive Solver with all dependencies.
+        
+        Args:
+            game: InertiaGame instance
+            gem_divider: Sukant's GemDivider (Divide phase)
+            cluster_conqueror: Nikhil's ClusterConqueror (Conquer phase)
+            dp_state_manager: Dhirja's DPStateManager (DP memoization)
+        """
+        self.game = game
+        
+        # INTEGRATION: Connect all three modules
+        self.gem_divider = gem_divider              # Sukant's module
+        self.cluster_conqueror = cluster_conqueror  # Nikhil's module
+        self.dp_state_manager = dp_state_manager    # Dhirja's module
+        
+        print("[BADRI C1] ✅ RecursiveSolver initialized - All modules integrated")
+    
+    def solve(self, start_position):
+        """
+        NEW (C1): Main entry point for solving the game.
+        
+        This is the public interface that starts the recursive solving process.
+        It sets up the initial state and kicks off the recursion.
+        
+        Args:
+            start_position: Starting position tuple (row, col)
+        
+        Returns:
+            Tuple of (best_score, best_direction, best_path)
+            Returns (0, None, []) if no solution found
+        """
+        print(f"\n[BADRI C1] 🚀 Starting recursive solve from {start_position}")
+        
+        # Clear memoization table for fresh start
+        self.dp_state_manager.clear_memo()
+        
+        # Create initial state: starting position, no gems collected
+        initial_state = self.dp_state_manager.create_state(start_position, frozenset())
+        
+        print(f"[BADRI C1] 📍 Initial state: {self.dp_state_manager.state_to_string(initial_state)}")
+        
+        # Start recursive solving
+        result = self._solve_recursive(initial_state, depth=0)
+        
+        # Print final statistics
+        stats = self.dp_state_manager.get_memo_stats()
+        print(f"\n[BADRI C1] 📊 Final Statistics:")
+        print(f"[BADRI C1]    Memo size: {stats['memo_size']}")
+        print(f"[BADRI C1]    Cache hits: {stats['memo_hits']}")
+        print(f"[BADRI C1]    Hit rate: {stats['hit_rate']:.2f}%")
+        
+        return result
+    
+    def _solve_recursive(self, state, depth):
+        """
+        NEW (C1): Core recursive solving function.
+        
+        This implements the DP recursion with memoization:
+        1. Check if state already computed (memoization)
+        2. Base case: goal state reached
+        3. Try all possible moves
+        4. Recursively solve from each resulting state
+        5. Return best result and memoize it
+        
+        Args:
+            state: Current DP state
+            depth: Current recursion depth (for debugging)
+        
+        Returns:
+            Tuple of (best_score, best_direction, best_path)
+        """
+        print(f"[BADRI C1] 🔄 Recursive call at depth {depth}")
+        print(f"[BADRI C1]    State: {self.dp_state_manager.state_to_string(state)}")
+        
+        # STEP 1: Check memoization (Dhirja's module)
+        cached_result = self.dp_state_manager.get_memo(state)
+        if cached_result is not None:
+            print(f"[BADRI C1] 🎯 Cache hit! Returning memoized result")
+            return cached_result
+        
+        # STEP 2: Base case - check if goal state (all gems collected)
+        all_gems = self.gem_divider.get_remaining_gems()
+        if self.dp_state_manager.is_goal_state(state, len(all_gems)):
+            print(f"[BADRI C1] 🏁 GOAL STATE! All gems collected")
+            result = (len(all_gems), None, [])
+            self.dp_state_manager.set_memo(state, *result)
+            return result
+        
+        # STEP 3: Extract current position and collected gems
+        current_pos = self.dp_state_manager.get_state_position(state)
+        already_collected = self.dp_state_manager.get_state_collected(state)
+        
+        print(f"[BADRI C1] 💎 Current: {len(already_collected)} gems collected, {len(all_gems) - len(already_collected)} remaining")
+        
+        # STEP 4: Try all possible directions (TODO C2: optimize with clustering)
+        best_score = len(already_collected)  # Current gems collected
+        best_direction = None
+        best_path = []
+        
+        print(f"[BADRI C1] 🔍 Trying all 8 directions...")
+        
+        for direction in self.cluster_conqueror.get_all_directions():
+            direction_name = self.cluster_conqueror.get_direction_name(direction)
+            
+            # Use Nikhil's module to simulate move
+            end_pos, new_gems, hit_mine, path = self.cluster_conqueror.simulate_move(
+                current_pos, direction, already_collected
+            )
+            
+            # Skip invalid moves
+            if hit_mine or end_pos == current_pos:
+                continue
+            
+            # Calculate score for this move
+            move_score = len(new_gems)
+            
+            if move_score > 0:
+                print(f"[BADRI C1]    {direction_name}: +{move_score} gems → {end_pos}")
+            
+            # Create next state using Dhirja's module
+            next_state = self.dp_state_manager.create_next_state(state, end_pos, new_gems)
+            
+            if next_state is None:
+                continue
+            
+            # TODO (C2): Add recursive call here
+            # For now, just evaluate immediate gem collection
+            total_score = len(already_collected) + move_score
+            
+            if total_score > best_score:
+                best_score = total_score
+                best_direction = direction
+                best_path = path
+                print(f"[BADRI C1]    ✨ New best: {best_score} gems via {direction_name}")
+        
+        # STEP 5: Memoize result
+        result = (best_score, best_direction, best_path)
+        self.dp_state_manager.set_memo(state, *result)
+        
+        print(f"[BADRI C1] ✅ Depth {depth} complete: best_score={best_score}")
+        
+        return result
 
 
 # ==================== GAME CODE ====================
@@ -629,6 +678,14 @@ class InertiaGame:
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         self.cluster_conqueror = ClusterConqueror(self)
         self.dp_state_manager = DPStateManager()
+        
+        # BADRI'S ADDITION: Initialize recursive solver
+        self.recursive_solver = RecursiveSolver(
+            self,
+            self.gem_divider,
+            self.cluster_conqueror,
+            self.dp_state_manager
+        )
     
     def reset(self):
         """Reset game to initial state"""
@@ -661,6 +718,12 @@ class InertiaGame:
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         self.cluster_conqueror = ClusterConqueror(self)
         self.dp_state_manager = DPStateManager()
+        self.recursive_solver = RecursiveSolver(
+            self,
+            self.gem_divider,
+            self.cluster_conqueror,
+            self.dp_state_manager
+        )
     
     def change_map(self, map_name):
         """Change to different map"""
@@ -734,84 +797,38 @@ class InertiaGame:
     
     def get_cpu_move(self):
         """
-        Get CPU move - TEMPORARY: Uses simple greedy strategy
+        Get CPU move using Badri's recursive solver!
         
-        DHIRJA'S FINAL TEST (C4): Test advanced state utilities
-        TODO: Badri's recursive solver (commits 14-16) will use ALL modules
+        BADRI'S TEST (C1): Test basic recursive solving
         """
-        # Test Dhirja's advanced utilities
+        # Test Badri's recursive solver
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Dhirja's DPStateManager (C4) - FINAL ✅")
-        print("[CPU AI] Advanced State Utilities")
+        print("[CPU AI] Testing Badri's RecursiveSolver (C1)")
+        print("[CPU AI] FULL INTEGRATION of all 4 modules!")
+        print(f"{'='*70}")
         
-        # Test 1: Create and compare states
-        print("\n[CPU AI] Test 1: State comparison")
-        state1 = self.dp_state_manager.create_state((3, 0), frozenset())
-        state2 = self.dp_state_manager.create_state((3, 3), frozenset([(3, 3)]))
+        # Solve from current position
+        score, direction, path = self.recursive_solver.solve(self.ball_pos)
         
-        comparison = self.dp_state_manager.compare_states(state1, state2)
+        print(f"\n[CPU AI] 🎯 Solver result:")
+        print(f"[CPU AI]    Best score: {score}")
+        print(f"[CPU AI]    Best direction: {self.cluster_conqueror.get_direction_name(direction) if direction else 'None'}")
+        print(f"[CPU AI]    Path length: {len(path)}")
         
-        # Test 2: Merge gem sets
-        print("\n[CPU AI] Test 2: Merge gem sets")
-        gems1 = frozenset([(3, 3), (3, 5)])
-        gems2 = frozenset([(5, 3), (1, 3)])
-        merged = self.dp_state_manager.merge_collected_gems(gems1, gems2)
-        print(f"[CPU AI] Merged result: {len(merged)} total gems")
+        print(f"\n{'='*70}\n")
         
-        # Test 3: State transitions
-        print("\n[CPU AI] Test 3: State transition")
-        current_state = self.dp_state_manager.create_state((3, 0), frozenset())
-        new_pos = (3, 3)
-        new_gems = frozenset([(3, 3)])
-        
-        next_state = self.dp_state_manager.create_next_state(current_state, new_pos, new_gems)
-        print(f"[CPU AI] Transition complete: {self.dp_state_manager.state_to_string(next_state)}")
-        
-        # Test 4: Goal state checking
-        print("\n[CPU AI] Test 4: Goal state checking")
-        all_gems = self.gem_divider.get_remaining_gems()
-        total_gem_count = len(all_gems)
-        
-        is_goal1 = self.dp_state_manager.is_goal_state(state1, total_gem_count)
-        print(f"[CPU AI] State1 is goal: {is_goal1}")
-        
-        goal_state = self.dp_state_manager.create_state((5, 5), all_gems)
-        is_goal2 = self.dp_state_manager.is_goal_state(goal_state, total_gem_count)
-        print(f"[CPU AI] Goal state is goal: {is_goal2}")
-        
-        # Test 5: Uncollected gems
-        print("\n[CPU AI] Test 5: Get uncollected gems")
-        uncollected = self.dp_state_manager.get_uncollected_gems(state2, all_gems)
-        print(f"[CPU AI] Remaining: {len(uncollected)} gems")
-        
-        # Test 6: String representation
-        print("\n[CPU AI] Test 6: State string representation")
-        for state in [state1, state2, next_state]:
-            print(f"[CPU AI] {self.dp_state_manager.state_to_string(state)}")
-        
-        print(f"\n🎉 DHIRJA'S MODULE COMPLETE (4/4 commits)")
-        print(f"{'='*70}\n")
-        
-        # Temporary greedy AI (will be replaced by Badri's solver)
-        best_direction = None
-        best_gems = 0
-        best_path = []
-        
-        for direction in ALL_DIRECTIONS:
-            end_pos, gems, hit_mine, path = self.simulate_move(direction)
-            if not hit_mine and end_pos != self.ball_pos:
-                if gems > best_gems or (gems == best_gems and best_direction is None):
-                    best_direction = direction
-                    best_gems = gems
-                    best_path = path
-        
-        return best_direction, best_path
+        # Return the best move found
+        if direction:
+            return direction, path
+        else:
+            # Fallback to Nikhil's fallback strategy
+            return self.cluster_conqueror.find_fallback_move()
 
 
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 13/16: Dhirja COMPLETE ✅]")
+        self.root.title("Inertia [Commit 14/16: Badri - Recursive Solver]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -840,7 +857,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 13/16: Dhirja - Advanced Utilities ✅ COMPLETE",
+            text="Commit 14/16: Badri - Recursive Solver Foundation (1/3) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -1196,7 +1213,8 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"🎉 Dhirja's Module COMPLETE (4/4) ✅")
+               f"Badri's Module: 1/3 commits ✅\n"
+               f"All 4 modules now integrated!")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -1225,17 +1243,20 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 13/16 - DHIRJA: Advanced State Utilities ✅ COMPLETE")
+    print("COMMIT 14/16 - BADRI: Recursive Solver Foundation")
     print("=" * 70)
-    print("✅ compare_states() - compare two states")
-    print("✅ merge_collected_gems() - combine gem sets")
-    print("✅ create_next_state() - state transition helper")
-    print("✅ is_goal_state() - check if complete")
-    print("✅ get_uncollected_gems() - find remaining")
-    print("✅ state_to_string() - debug representation")
-    print("🎉 DHIRJA'S MODULE 100% COMPLETE (4/4 commits)")
-    print("📊 Total Progress: 13/16 commits")
-    print("⏭️  Next: Badri's Recursive DP Solver (Commits 14-16)")
+    print("✅ RecursiveSolver class created")
+    print("✅ solve() entry point implemented")
+    print("✅ _solve_recursive() core recursion")
+    print("✅ Base case: goal state detection")
+    print("✅ All 4 modules now integrated:")
+    print("   - Sukant's GemDivider (Divide)")
+    print("   - Nikhil's ClusterConqueror (Conquer)")
+    print("   - Dhirja's DPStateManager (DP)")
+    print("   - Badri's RecursiveSolver (Integration)")
+    print("📊 Progress: Badri 1/3 commits")
+    print("📊 Total Progress: 14/16 commits")
+    print("⏭️  Next: Cluster-based optimization (C2)")
     print("=" * 70)
     
     root = tk.Tk()
