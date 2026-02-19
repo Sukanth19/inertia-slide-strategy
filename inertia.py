@@ -500,135 +500,134 @@ class DPStateManager:
         return state[1]
 
 
-# ==================== BADRI'S MODULE - COMMIT 1/3 ====================
+# ==================== BADRI'S MODULE - COMMIT 2/3 ====================
 
 class RecursiveSolver:
     """
-    BADRI - Recursive DP Solver (Commit 1/3)
-    Core recursive solver foundation
+    BADRI - Recursive DP Solver (Commit 2/3)
+    Complete recursive solving with cluster optimization
     
     Responsibility:
-    - Integrate all three modules (C1) ✅ NEW
-    - Core recursive solving structure (C1) ✅ NEW
-    - Base case handling (C1) ✅ NEW
+    - Integrate all three modules (C1) ✅
+    - Core recursive solving structure (C1) ✅
+    - Base case handling (C1) ✅
+    - Cluster-based optimization (C2) ✅ NEW
+    - Full recursive depth exploration (C2) ✅ NEW
+    - Smart move prioritization (C2) ✅ NEW
     
-    This brings everything together:
-    - Uses Sukant's GemDivider for clustering
-    - Uses Nikhil's ClusterConqueror for move simulation
-    - Uses Dhirja's DPStateManager for memoization
-    
-    TODO (next commits):
-    - Cluster-based optimization (C2)
-    - Complete integration (C3)
+    🎉 ALMOST COMPLETE - Just needs final polish (C3)
     """
     
-    def __init__(self, game, gem_divider, cluster_conqueror, dp_state_manager):
+    def __init__(self, game, gem_divider, cluster_conqueror, dp_state_manager, max_depth=3):
         """
         Initialize the Recursive Solver with all dependencies.
         
         Args:
             game: InertiaGame instance
-            gem_divider: Sukant's GemDivider (Divide phase)
-            cluster_conqueror: Nikhil's ClusterConqueror (Conquer phase)
-            dp_state_manager: Dhirja's DPStateManager (DP memoization)
+            gem_divider: Sukant's GemDivider
+            cluster_conqueror: Nikhil's ClusterConqueror
+            dp_state_manager: Dhirja's DPStateManager
+            max_depth: Maximum recursion depth (default 3)
         """
         self.game = game
         
         # INTEGRATION: Connect all three modules
-        self.gem_divider = gem_divider              # Sukant's module
-        self.cluster_conqueror = cluster_conqueror  # Nikhil's module
-        self.dp_state_manager = dp_state_manager    # Dhirja's module
+        self.gem_divider = gem_divider
+        self.cluster_conqueror = cluster_conqueror
+        self.dp_state_manager = dp_state_manager
         
-        print("[BADRI C1] ✅ RecursiveSolver initialized - All modules integrated")
+        # NEW (C2): Configuration
+        self.max_depth = max_depth
+        
+        print(f"[BADRI C2] ✅ RecursiveSolver initialized - Cluster optimization enabled (max_depth={max_depth})")
     
     def solve(self, start_position):
         """
-        NEW (C1): Main entry point for solving the game.
-        
-        This is the public interface that starts the recursive solving process.
-        It sets up the initial state and kicks off the recursion.
+        Main entry point for solving the game.
         
         Args:
             start_position: Starting position tuple (row, col)
         
         Returns:
             Tuple of (best_score, best_direction, best_path)
-            Returns (0, None, []) if no solution found
         """
-        print(f"\n[BADRI C1] 🚀 Starting recursive solve from {start_position}")
+        print(f"\n[BADRI C2] 🚀 Starting OPTIMIZED recursive solve from {start_position}")
         
         # Clear memoization table for fresh start
         self.dp_state_manager.clear_memo()
         
-        # Create initial state: starting position, no gems collected
+        # Create initial state
         initial_state = self.dp_state_manager.create_state(start_position, frozenset())
         
-        print(f"[BADRI C1] 📍 Initial state: {self.dp_state_manager.state_to_string(initial_state)}")
+        print(f"[BADRI C2] 📍 Initial state: {self.dp_state_manager.state_to_string(initial_state)}")
         
         # Start recursive solving
         result = self._solve_recursive(initial_state, depth=0)
         
         # Print final statistics
         stats = self.dp_state_manager.get_memo_stats()
-        print(f"\n[BADRI C1] 📊 Final Statistics:")
-        print(f"[BADRI C1]    Memo size: {stats['memo_size']}")
-        print(f"[BADRI C1]    Cache hits: {stats['memo_hits']}")
-        print(f"[BADRI C1]    Hit rate: {stats['hit_rate']:.2f}%")
+        print(f"\n[BADRI C2] 📊 Final Statistics:")
+        print(f"[BADRI C2]    Memo size: {stats['memo_size']}")
+        print(f"[BADRI C2]    Cache hits: {stats['memo_hits']}")
+        print(f"[BADRI C2]    Hit rate: {stats['hit_rate']:.2f}%")
         
         return result
     
     def _solve_recursive(self, state, depth):
         """
-        NEW (C1): Core recursive solving function.
-        
-        This implements the DP recursion with memoization:
-        1. Check if state already computed (memoization)
-        2. Base case: goal state reached
-        3. Try all possible moves
-        4. Recursively solve from each resulting state
-        5. Return best result and memoize it
+        UPDATED (C2): Complete recursive solving with cluster optimization.
         
         Args:
             state: Current DP state
-            depth: Current recursion depth (for debugging)
+            depth: Current recursion depth
         
         Returns:
             Tuple of (best_score, best_direction, best_path)
         """
-        print(f"[BADRI C1] 🔄 Recursive call at depth {depth}")
-        print(f"[BADRI C1]    State: {self.dp_state_manager.state_to_string(state)}")
-        
-        # STEP 1: Check memoization (Dhirja's module)
+        # Check memoization
         cached_result = self.dp_state_manager.get_memo(state)
         if cached_result is not None:
-            print(f"[BADRI C1] 🎯 Cache hit! Returning memoized result")
             return cached_result
         
-        # STEP 2: Base case - check if goal state (all gems collected)
+        # Base case 1: Check if goal state
         all_gems = self.gem_divider.get_remaining_gems()
         if self.dp_state_manager.is_goal_state(state, len(all_gems)):
-            print(f"[BADRI C1] 🏁 GOAL STATE! All gems collected")
+            print(f"[BADRI C2] 🏁 GOAL at depth {depth}!")
             result = (len(all_gems), None, [])
             self.dp_state_manager.set_memo(state, *result)
             return result
         
-        # STEP 3: Extract current position and collected gems
+        # NEW (C2): Base case 2 - Depth limit reached
+        if depth >= self.max_depth:
+            current_score = len(self.dp_state_manager.get_state_collected(state))
+            print(f"[BADRI C2] ⚠️  Max depth {self.max_depth} reached, score={current_score}")
+            result = (current_score, None, [])
+            self.dp_state_manager.set_memo(state, *result)
+            return result
+        
+        # Extract current info
         current_pos = self.dp_state_manager.get_state_position(state)
         already_collected = self.dp_state_manager.get_state_collected(state)
         
-        print(f"[BADRI C1] 💎 Current: {len(already_collected)} gems collected, {len(all_gems) - len(already_collected)} remaining")
+        # NEW (C2): Get uncollected gems and cluster them using Sukant's module
+        uncollected = self.dp_state_manager.get_uncollected_gems(state, all_gems)
         
-        # STEP 4: Try all possible directions (TODO C2: optimize with clustering)
-        best_score = len(already_collected)  # Current gems collected
+        if len(uncollected) > 0:
+            clusters = self.gem_divider.divide_gems_into_clusters(uncollected)
+            print(f"[BADRI C2] 🌳 Depth {depth}: {len(uncollected)} uncollected gems → {len(clusters)} clusters")
+        else:
+            clusters = []
+        
+        # Initialize best result
+        best_score = len(already_collected)
         best_direction = None
         best_path = []
         
-        print(f"[BADRI C1] 🔍 Trying all 8 directions...")
+        # NEW (C2): Prioritize moves using cluster proximity
+        move_candidates = []
         
         for direction in self.cluster_conqueror.get_all_directions():
-            direction_name = self.cluster_conqueror.get_direction_name(direction)
-            
-            # Use Nikhil's module to simulate move
+            # Simulate move using Nikhil's module
             end_pos, new_gems, hit_mine, path = self.cluster_conqueror.simulate_move(
                 current_pos, direction, already_collected
             )
@@ -637,11 +636,31 @@ class RecursiveSolver:
             if hit_mine or end_pos == current_pos:
                 continue
             
-            # Calculate score for this move
-            move_score = len(new_gems)
+            # NEW (C2): Calculate priority based on:
+            # 1. Gems collected immediately
+            # 2. Distance to nearest cluster
+            immediate_value = len(new_gems) * 100  # High value for immediate gems
             
-            if move_score > 0:
-                print(f"[BADRI C1]    {direction_name}: +{move_score} gems → {end_pos}")
+            # Calculate distance to nearest cluster
+            min_cluster_dist = float('inf')
+            if clusters:
+                for cluster in clusters:
+                    dist = self.cluster_conqueror.calculate_distance_to_cluster(end_pos, cluster)
+                    min_cluster_dist = min(min_cluster_dist, dist)
+            
+            # Priority: higher is better
+            # Prioritize immediate gems, then closeness to clusters
+            proximity_value = 1000 / (min_cluster_dist + 1) if min_cluster_dist != float('inf') else 0
+            priority = immediate_value + proximity_value
+            
+            move_candidates.append((priority, direction, end_pos, new_gems, path))
+        
+        # NEW (C2): Sort moves by priority (highest first)
+        move_candidates.sort(reverse=True, key=lambda x: x[0])
+        
+        # Try moves in priority order
+        for priority, direction, end_pos, new_gems, path in move_candidates:
+            direction_name = self.cluster_conqueror.get_direction_name(direction)
             
             # Create next state using Dhirja's module
             next_state = self.dp_state_manager.create_next_state(state, end_pos, new_gems)
@@ -649,21 +668,19 @@ class RecursiveSolver:
             if next_state is None:
                 continue
             
-            # TODO (C2): Add recursive call here
-            # For now, just evaluate immediate gem collection
-            total_score = len(already_collected) + move_score
+            # NEW (C2): FULL RECURSION - Solve from next state
+            future_score, _, future_path = self._solve_recursive(next_state, depth + 1)
             
-            if total_score > best_score:
-                best_score = total_score
+            # Total score is what we can achieve from this state
+            if future_score > best_score:
+                best_score = future_score
                 best_direction = direction
                 best_path = path
-                print(f"[BADRI C1]    ✨ New best: {best_score} gems via {direction_name}")
+                print(f"[BADRI C2] ✨ Depth {depth} new best: {best_score} gems via {direction_name}")
         
-        # STEP 5: Memoize result
+        # Memoize result
         result = (best_score, best_direction, best_path)
         self.dp_state_manager.set_memo(state, *result)
-        
-        print(f"[BADRI C1] ✅ Depth {depth} complete: best_score={best_score}")
         
         return result
 
@@ -678,13 +695,12 @@ class InertiaGame:
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         self.cluster_conqueror = ClusterConqueror(self)
         self.dp_state_manager = DPStateManager()
-        
-        # BADRI'S ADDITION: Initialize recursive solver
         self.recursive_solver = RecursiveSolver(
             self,
             self.gem_divider,
             self.cluster_conqueror,
-            self.dp_state_manager
+            self.dp_state_manager,
+            max_depth=3  # Limit depth to keep it fast
         )
     
     def reset(self):
@@ -722,7 +738,8 @@ class InertiaGame:
             self,
             self.gem_divider,
             self.cluster_conqueror,
-            self.dp_state_manager
+            self.dp_state_manager,
+            max_depth=3
         )
     
     def change_map(self, map_name):
@@ -797,23 +814,25 @@ class InertiaGame:
     
     def get_cpu_move(self):
         """
-        Get CPU move using Badri's recursive solver!
+        Get CPU move using OPTIMIZED recursive solver!
         
-        BADRI'S TEST (C1): Test basic recursive solving
+        Now with cluster-based optimization and full recursion.
         """
-        # Test Badri's recursive solver
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Badri's RecursiveSolver (C1)")
-        print("[CPU AI] FULL INTEGRATION of all 4 modules!")
+        print("[CPU AI] 🎯 OPTIMIZED Recursive Solver Active!")
+        print("[CPU AI] Features:")
+        print("[CPU AI]   ✅ Full recursive depth exploration")
+        print("[CPU AI]   ✅ Cluster-based move prioritization")
+        print("[CPU AI]   ✅ DP memoization")
+        print("[CPU AI]   ✅ Smart lookahead")
         print(f"{'='*70}")
         
         # Solve from current position
         score, direction, path = self.recursive_solver.solve(self.ball_pos)
         
-        print(f"\n[CPU AI] 🎯 Solver result:")
-        print(f"[CPU AI]    Best score: {score}")
-        print(f"[CPU AI]    Best direction: {self.cluster_conqueror.get_direction_name(direction) if direction else 'None'}")
-        print(f"[CPU AI]    Path length: {len(path)}")
+        print(f"\n[CPU AI] 🎯 FINAL DECISION:")
+        print(f"[CPU AI]    Projected score: {score}")
+        print(f"[CPU AI]    Chosen move: {self.cluster_conqueror.get_direction_name(direction) if direction else 'None'}")
         
         print(f"\n{'='*70}\n")
         
@@ -821,14 +840,14 @@ class InertiaGame:
         if direction:
             return direction, path
         else:
-            # Fallback to Nikhil's fallback strategy
+            # Fallback if no good move found
             return self.cluster_conqueror.find_fallback_move()
 
 
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 14/16: Badri - Recursive Solver]")
+        self.root.title("Inertia [Commit 15/16: Badri - Cluster Optimization]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -857,7 +876,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 14/16: Badri - Recursive Solver Foundation (1/3) ✅",
+            text="Commit 15/16: Badri - Cluster Optimization (2/3) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -1213,8 +1232,8 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Badri's Module: 1/3 commits ✅\n"
-               f"All 4 modules now integrated!")
+               f"Badri's Module: 2/3 commits ✅\n"
+               f"CPU now uses smart recursive solver!")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -1243,20 +1262,17 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 14/16 - BADRI: Recursive Solver Foundation")
+    print("COMMIT 15/16 - BADRI: Cluster-Based Optimization")
     print("=" * 70)
-    print("✅ RecursiveSolver class created")
-    print("✅ solve() entry point implemented")
-    print("✅ _solve_recursive() core recursion")
-    print("✅ Base case: goal state detection")
-    print("✅ All 4 modules now integrated:")
-    print("   - Sukant's GemDivider (Divide)")
-    print("   - Nikhil's ClusterConqueror (Conquer)")
-    print("   - Dhirja's DPStateManager (DP)")
-    print("   - Badri's RecursiveSolver (Integration)")
-    print("📊 Progress: Badri 1/3 commits")
-    print("📊 Total Progress: 14/16 commits")
-    print("⏭️  Next: Cluster-based optimization (C2)")
+    print("✅ Full recursive depth exploration")
+    print("✅ Cluster-based move prioritization")
+    print("✅ Smart lookahead (depth=3)")
+    print("✅ Complete DP memoization")
+    print("✅ Proximity-based move ordering")
+    print("🎯 CPU AI now plays intelligently!")
+    print("📊 Progress: Badri 2/3 commits")
+    print("📊 Total Progress: 15/16 commits")
+    print("⏭️  Next: FINAL COMMIT - Complete integration & polish (C3)")
     print("=" * 70)
     
     root = tk.Tk()
