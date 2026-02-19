@@ -310,7 +310,7 @@ class ClusterConqueror:
         return self.ALL_DIRECTIONS
 
 
-# ==================== DHIRJA'S MODULE ✅ COMPLETE ====================
+# ==================== DHIRAJ'S MODULE ✅ COMPLETE ====================
 
 class DPStateManager:
     
