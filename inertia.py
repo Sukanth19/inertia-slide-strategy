@@ -1,8 +1,8 @@
-
+# COMMIT 1.1 - SUKANTH
+# Basic adjacency list graph construction
 
 import tkinter as tk
 from tkinter import messagebox
-from collections import deque
 import random
 
 EMPTY, GEM, MINE, STOP = 0, 1, 2, 3
@@ -31,291 +31,61 @@ MAPS = {
     }
 }
 
-class GridRegion:
-    """SUKANTH: Data structure for recursive grid splitting"""
-    def __init__(self, board, row_start, row_end, col_start, col_end, parent_gems):
-        self.board = board
-        self.row_start = row_start
-        self.row_end = row_end
-        self.col_start = col_start
-        self.col_end = col_end
-        self.rows = row_end - row_start
-        self.cols = col_end - col_start
-        self.gems = self._extract_gems(parent_gems)
-        
-    def _extract_gems(self, parent_gems):
-        return {(r, c) for r, c in parent_gems 
-                if self.row_start <= r < self.row_end and 
-                   self.col_start <= c < self.col_end}
+# ========== SUKANTH 1.1: GRAPH STRUCTURE ==========
+
+class GraphBuilder:
+    """
+    SUKANTH 1.1: Adjacency list graph construction.
+    Converts grid to graph representation.
+    """
     
-    def size(self):
-        return self.rows * self.cols
-
-
-class RegionSolution:
-    """NIKHIL: Data structure for storing region solutions"""
-    def __init__(self, entry_pos, exit_pos, gems_collected, score, path):
-        self.entry_pos = entry_pos
-        self.exit_pos = exit_pos
-        self.gems_collected = frozenset(gems_collected)
-        self.score = score
-        self.path = path
-    
-    def __repr__(self):
-        return f"Solution(entry={self.entry_pos}, exit={self.exit_pos}, score={self.score}, gems={len(self.gems_collected)})"
-
-
-class DivideConquerSolver:
-    """SUKANTH + NIKHIL: Pure Divide & Conquer Solver"""
-    
-    def __init__(self, board, rows, cols, all_gems):
+    def __init__(self, board, rows, cols):
         self.board = board
         self.rows = rows
         self.cols = cols
-        self.all_gems = all_gems
-        self.split_threshold = 25
-        
-    # ========== SUKANTH: DIVIDE (from previous commit) ==========
+        self.graph = {}
+        self.cell_types = {}
     
-    def recursive_split(self, region, depth=0):
-        print(f"[SUKANTH-DIVIDE] Depth {depth}: Region {region.rows}x{region.cols}")
-        
-        if region.size() <= self.split_threshold:
-            return [(region, None)]
-        
-        left_region, right_region, boundary = self._bisect_region(region, depth)
-        left_splits = self.recursive_split(left_region, depth + 1)
-        right_splits = self.recursive_split(right_region, depth + 1)
-        
-        return left_splits + right_splits + [(boundary, 'boundary')]
-    
-    def _bisect_region(self, region, depth):
-        split_vertically = (depth % 2 == 0)
-        
-        if split_vertically:
-            mid_col = region.col_start + region.cols // 2
-            left_region = GridRegion(self.board, region.row_start, region.row_end,
-                                    region.col_start, mid_col, region.gems)
-            right_region = GridRegion(self.board, region.row_start, region.row_end,
-                                     mid_col, region.col_end, region.gems)
-            boundary = [(r, mid_col) for r in range(region.row_start, region.row_end)
-                       if self.board[r][mid_col] != MINE]
-        else:
-            mid_row = region.row_start + region.rows // 2
-            left_region = GridRegion(self.board, region.row_start, mid_row,
-                                    region.col_start, region.col_end, region.gems)
-            right_region = GridRegion(self.board, mid_row, region.row_end,
-                                     region.col_start, region.col_end, region.gems)
-            boundary = [(mid_row, c) for c in range(region.col_start, region.col_end)
-                       if self.board[mid_row][c] != MINE]
-        
-        return left_region, right_region, boundary
-    
-    # ========== NIKHIL: CONQUER ==========
-    
-    def conquer_region(self, region, entry_pos, collected_gems, depth=0):
+    def build_adjacency_list(self):
         """
-        NIKHIL - CONQUER: Solve subproblem for a single region.
-        
-        This is the CONQUER step of D&C:
-        - Takes a region (subproblem)
-        - Solves it INDEPENDENTLY
-        - Returns all possible solutions (different exit points)
-        
-        Returns: List[RegionSolution]
+        SUKANTH 1.1: Build adjacency list.
+        Each cell connected to valid neighbors (8 directions).
         """
-        print(f"[NIKHIL-CONQUER] Depth {depth}: Solving region {region.rows}x{region.cols} from {entry_pos}")
+        print(f"[SUKANTH-1.1] Building graph for {self.rows}x{self.cols} grid")
         
-        # BASE CASE: Region is small, solve directly with BFS
-        if region.size() <= self.split_threshold:
-            return self._solve_small_region_bfs(region, entry_pos, collected_gems)
-        
-        # RECURSIVE CASE: Split and solve recursively
-        left_region, right_region, boundary = self._bisect_region(region, depth)
-        
-        all_solutions = []
-        
-        # Try different boundary crossing points
-        boundary_sample = self._sample_boundary(boundary, max_points=5)
-        
-        for boundary_pos in boundary_sample:
-            
-            # CONQUER LEFT: Recursively solve left subregion
-            left_solutions = self.conquer_region(
-                left_region, 
-                entry_pos, 
-                collected_gems,
-                depth + 1
-            )
-            
-            # Filter: Only solutions that reach this boundary point
-            left_solutions_at_boundary = [
-                sol for sol in left_solutions 
-                if sol.exit_pos == boundary_pos
-            ]
-            
-            if not left_solutions_at_boundary:
-                continue
-            
-            # Take best left solution
-            best_left = max(left_solutions_at_boundary, key=lambda s: s.score)
-            
-            # CONQUER RIGHT: Recursively solve right subregion
-            right_solutions = self.conquer_region(
-                right_region,
-                boundary_pos,  # Enter right from boundary
-                best_left.gems_collected,  # With gems from left
-                depth + 1
-            )
-            
-            # COMBINE: Merge left and right solutions
-            for right_sol in right_solutions:
-                combined_solution = self._merge_solutions(best_left, right_sol)
-                all_solutions.append(combined_solution)
-        
-        print(f"[NIKHIL-CONQUER] Generated {len(all_solutions)} solutions for region")
-        return all_solutions
-    
-    def _solve_small_region_bfs(self, region, entry_pos, collected_gems):
-        """
-        NIKHIL: BASE CASE - Solve small region with BFS.
-        Returns all possible exit points with their solutions.
-        """
-        solutions = []
-        
-        # BFS from entry point
-        queue = deque([(entry_pos, collected_gems, 0, [entry_pos])])
-        visited = {(entry_pos, collected_gems)}
-        
-        while queue:
-            pos, gems, score, path = queue.popleft()
-            
-            # If at boundary, this is a valid solution
-            if self._is_boundary(pos, region):
-                solution = RegionSolution(
-                    entry_pos=entry_pos,
-                    exit_pos=pos,
-                    gems_collected=gems,
-                    score=len(gems),
-                    path=path
-                )
-                solutions.append(solution)
-            
-            # Explore neighbors
-            for direction in ALL_DIRECTIONS:
-                next_pos, new_gems, hit_mine, move_path = self._simulate_move_in_region(
-                    pos, direction, region, gems
-                )
+        for r in range(self.rows):
+            for c in range(self.cols):
+                pos = (r, c)
+                self.cell_types[pos] = self.board[r][c]
                 
-                if hit_mine or next_pos == pos:
+                # Skip mines
+                if self.board[r][c] == MINE:
                     continue
                 
-                state = (next_pos, new_gems)
-                if state not in visited:
-                    visited.add(state)
-                    queue.append((
-                        next_pos,
-                        new_gems,
-                        len(new_gems),
-                        path + move_path[1:]
-                    ))
+                neighbors = []
+                
+                # Check all 8 directions
+                for dr, dc in ALL_DIRECTIONS:
+                    nr, nc = r + dr, c + dc
+                    
+                    if (0 <= nr < self.rows and 0 <= nc < self.cols and 
+                        self.board[nr][nc] != MINE):
+                        neighbors.append((nr, nc))
+                
+                self.graph[pos] = neighbors
         
-        # If no solutions, return entry as exit (stay in place)
-        if not solutions:
-            solutions.append(RegionSolution(
-                entry_pos=entry_pos,
-                exit_pos=entry_pos,
-                gems_collected=collected_gems,
-                score=len(collected_gems),
-                path=[entry_pos]
-            ))
+        avg_degree = sum(len(v) for v in self.graph.values()) / len(self.graph)
+        print(f"[SUKANTH-1.1] Graph built: {len(self.graph)} nodes, avg degree {avg_degree:.1f}")
         
-        return solutions
-    
-    def _simulate_move_in_region(self, start_pos, direction, region, collected):
-        """Simulate move within region boundaries"""
-        dr, dc = direction
-        r, c = start_pos
-        gems_on_path = set()
-        path = [(r, c)]
-        hit_mine = False
-        
-        while True:
-            next_r, next_c = r + dr, c + dc
-            
-            # Check region boundaries
-            if not (region.row_start <= next_r < region.row_end and 
-                    region.col_start <= next_c < region.col_end):
-                break
-            
-            r, c = next_r, next_c
-            path.append((r, c))
-            
-            cell = self.board[r][c]
-            if cell == GEM and (r, c) not in collected:
-                gems_on_path.add((r, c))
-            elif cell == MINE:
-                hit_mine = True
-                break
-            elif cell == STOP:
-                break
-        
-        return (r, c), frozenset(collected | gems_on_path), hit_mine, path
-    
-    def _is_boundary(self, pos, region):
-        """Check if position is on region boundary"""
-        r, c = pos
-        return (r == region.row_start or r == region.row_end - 1 or
-                c == region.col_start or c == region.col_end - 1)
-    
-    def _sample_boundary(self, boundary, max_points=5):
-        """Sample boundary points to limit branching"""
-        if len(boundary) <= max_points:
-            return boundary
-        
-        step = len(boundary) // max_points
-        return [boundary[i] for i in range(0, len(boundary), step)][:max_points]
-    
-    # ========== NIKHIL: COMBINE ==========
-    
-    def _merge_solutions(self, sol1, sol2):
-        """
-        NIKHIL - COMBINE: Merge two regional solutions.
-        
-        This is the COMBINE step of D&C:
-        - Takes solutions from two adjacent regions
-        - Combines them into a single solution
-        - Classic merge operation
-        """
-        combined = RegionSolution(
-            entry_pos=sol1.entry_pos,
-            exit_pos=sol2.exit_pos,
-            gems_collected=sol1.gems_collected | sol2.gems_collected,
-            score=sol1.score + sol2.score,
-            path=sol1.path + sol2.path[1:]  # Avoid duplicate boundary position
-        )
-        
-        print(f"[NIKHIL-COMBINE] Merged: {sol1.score} + {sol2.score} = {combined.score} gems")
-        return combined
-    
-    def combine_all_solutions(self, solutions):
-        """
-        NIKHIL: Final combination to select best overall solution.
-        """
-        if not solutions:
-            return None
-        
-        # Select solution with highest score
-        best = max(solutions, key=lambda s: s.score)
-        
-        print(f"[NIKHIL-COMBINE] Best solution: {best.score} gems, {len(best.path)} moves")
-        return best
+        return self.graph, self.cell_types
 
 
 class InertiaGame:
     def __init__(self, map_name):
         self.map_name = map_name
-        self.dc_solver = None
+        self.graph_builder = None
+        self.graph = {}
+        self.cell_types = {}
         self.reset()
     
     def reset(self):
@@ -334,14 +104,14 @@ class InertiaGame:
         self.total_gems = len(map_data["gems"])
         self.cpu_history = []
         
-        # Initialize D&C solver (Sukanth + Nikhil)
-        all_gems = set(map_data["gems"])
-        self.dc_solver = DivideConquerSolver(self.board, self.rows, self.cols, all_gems)
+        # SUKANTH 1.1: Build graph
+        self.graph_builder = GraphBuilder(self.board, self.rows, self.cols)
+        self.graph, self.cell_types = self.graph_builder.build_adjacency_list()
     
-    def simulate_move(self, direction, start_pos=None, collected=frozenset()):
+    def simulate_move(self, direction):
         dr, dc = direction
-        r, c = start_pos or self.ball_pos
-        gems, path, hit_mine = 0 if start_pos is None else set(), [(r, c)], False
+        r, c = self.ball_pos
+        gems, path, hit_mine = 0, [(r, c)], False
         
         while True:
             next_r, next_c = r + dr, c + dc
@@ -351,53 +121,14 @@ class InertiaGame:
             path.append((r, c))
             
             cell = self.board[r][c]
-            if cell == GEM:
-                if start_pos is None: gems += 1
-                elif (r, c) not in collected: gems.add((r, c))
+            if cell == GEM: gems += 1
             elif cell == MINE: hit_mine = True; break
             elif cell == STOP: break
         
-        return (r, c), (gems if start_pos is None else frozenset(gems)), hit_mine, path
+        return (r, c), gems, hit_mine, path
     
     def get_cpu_move(self):
-        """
-        NIKHIL: Use D&C solver for CPU move.
-        This demonstrates the full D&C algorithm in action.
-        """
-        # Create full grid region
-        root_region = GridRegion(self.board, 0, self.rows, 0, self.cols, self.dc_solver.all_gems)
-        
-        # Get current collected gems
-        collected = frozenset()
-        
-        # DIVIDE + CONQUER: Solve recursively
-        solutions = self.dc_solver.conquer_region(
-            root_region,
-            self.ball_pos,
-            collected,
-            depth=0
-        )
-        
-        # COMBINE: Select best solution
-        best_solution = self.dc_solver.combine_all_solutions(solutions)
-        
-        if best_solution and len(best_solution.path) > 1:
-            # Extract next move direction
-            current = best_solution.path[0]
-            next_pos = best_solution.path[1]
-            
-            direction = (next_pos[0] - current[0], next_pos[1] - current[1])
-            
-            # Simulate to get full path for this move
-            _, _, _, path = self.simulate_move(direction)
-            
-            return direction, path
-        
-        # Fallback: greedy
-        return self._greedy_move()
-    
-    def _greedy_move(self):
-        """Fallback greedy strategy"""
+        """Simple greedy AI"""
         best_dir, best_score, best_path = None, -999999, []
         
         for direction in ALL_DIRECTIONS:
@@ -456,7 +187,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("INERTIA [C2: Nikhil-D&C-CONQUER+COMBINE]")
+        self.root.title("INERTIA [C1.1: Sukanth-Graph]")
         
         self.colors = {
             'bg_darkest': '#0d0221', 'bg_dark': '#1a0b2e', 'bg_medium': '#2d1b4e',
@@ -492,7 +223,7 @@ class InertiaGUI:
         tk.Label(title_inner, text="⬢  I N E R T I A  ⬢", font=("Helvetica", 42, "bold"),
                 fg=self.colors['accent_cyan'], bg=self.colors['bg_dark']).pack()
         
-        tk.Label(title_inner, text="╺━━━  C2: NIKHIL - PURE D&C (CONQUER+COMBINE)  ━━━╸",
+        tk.Label(title_inner, text="C1.1: SUKANTH - Graph Structure",
                 font=("Courier", 11, "bold"), fg=self.colors['accent_purple'], bg=self.colors['bg_dark']).pack(pady=(8, 0))
         
         map_outer = tk.Frame(main, bg=self.colors['accent_cyan'], padx=2, pady=2)
@@ -625,7 +356,7 @@ class InertiaGUI:
         if self.animating or self.waiting_for_cpu or self.game.game_over: return
         success, gems, path, hit_mine = self.game.make_move(direction, is_human=True)
         if hit_mine:
-            self.animate_move(path, lambda: messagebox.showinfo("MINE!", "You hit a mine!\nAI WINS"))
+            self.animate_move(path, lambda: messagebox.showinfo("MINE!", "You hit a mine!"))
             return
         if not success: return
         self.animate_move(path, self.cpu_move)
