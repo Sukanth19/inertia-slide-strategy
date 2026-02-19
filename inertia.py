@@ -1,4 +1,5 @@
 
+
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -161,33 +162,14 @@ class GemDivider:
         return self.clusters_created
 
 
-# ==================== NIKHIL'S MODULE - COMMIT 5/5 ✅ COMPLETE ====================
+# ==================== NIKHIL'S MODULE - COMPLETE ✅ ====================
 
 class ClusterConqueror:
-    """
-    NIKHIL - Conquer Phase (Commit 5/5) ✅ COMPLETE
-    Complete with fallback strategies and utilities
-    
-    Responsibility:
-    - Simulate moves from any position (C1) ✅
-    - Boundary & obstacle detection (C2) ✅
-    - Gem collection along path (C3) ✅
-    - Validate all 8 directions (C4) ✅
-    - Fallback strategies & utilities (C5) ✅ NEW
-    
-    🎉 MODULE COMPLETE - Ready for production use!
-    """
+    """NIKHIL - Conquer Phase ✅ COMPLETE"""
     
     def __init__(self, game):
-        """
-        Initialize the Cluster Conqueror.
-        
-        Args:
-            game: InertiaGame instance
-        """
         self.game = game
         
-        # Direction constants
         self.UP = (-1, 0)
         self.DOWN = (1, 0)
         self.LEFT = (0, -1)
@@ -202,45 +184,20 @@ class ClusterConqueror:
             self.UP_LEFT, self.UP_RIGHT, self.DOWN_LEFT, self.DOWN_RIGHT
         ]
         
-        # Direction name mapping for debugging
         self.DIRECTION_NAMES = {
             self.UP: "UP ↑",
             self.DOWN: "DOWN ↓",
             self.LEFT: "LEFT ←",
             self.RIGHT: "RIGHT →",
-            self.UP_LEFT: "UP_LEFT ↖️",
-            self.UP_RIGHT: "UP_RIGHT ↗️",
-            self.DOWN_LEFT: "DOWN_LEFT ↙️",
-            self.DOWN_RIGHT: "DOWN_RIGHT ↘️"
+            self.UP_LEFT: "UP_LEFT ↖",
+            self.UP_RIGHT: "UP_RIGHT ↗",
+            self.DOWN_LEFT: "DOWN_LEFT ↙",
+            self.DOWN_RIGHT: "DOWN_RIGHT ↘"
         }
-        
-        print("[NIKHIL C5] 🎉 ClusterConqueror FULLY IMPLEMENTED - All features complete")
     
     def simulate_move(self, start_pos, direction, already_collected):
-        """
-        Complete move simulation with all features.
-        
-        Simulates continuous sliding with:
-        - Direction validation
-        - Boundary detection
-        - Obstacle handling (MINE, STOP)
-        - Gem collection
-        - Path tracking
-        
-        Args:
-            start_pos: Starting position (r, c)
-            direction: Direction tuple (dr, dc)
-            already_collected: Frozenset of gem positions already collected
-        
-        Returns:
-            Tuple of (end_pos, gems_collected_set, hit_mine, path)
-        """
-        # Validate direction
         if not self.is_valid_direction(direction):
-            print(f"[NIKHIL C5] ⚠️  Invalid direction: {direction}")
             return start_pos, frozenset(), False, [start_pos]
-        
-        direction_name = self.get_direction_name(direction)
         
         dr, dc = direction
         r, c = start_pos
@@ -248,37 +205,25 @@ class ClusterConqueror:
         path = [(r, c)]
         hit_mine = False
         
-        # Continuous sliding loop
         while True:
             next_r, next_c = r + dr, c + dc
             
-            # Boundary check
             if not self._is_in_bounds(next_r, next_c):
                 break
             
-            # Move to next position
             r, c = next_r, next_c
             path.append((r, c))
             
-            # Get cell type and handle obstacles
             cell_type = self.game.board[r][c]
             
             if cell_type == GEM:
-                # Collect gem if not already collected
                 if (r, c) not in already_collected:
                     gems_on_path.add((r, c))
-                # Continue sliding
-                
             elif cell_type == MINE:
-                # Hit mine - invalid move
                 hit_mine = True
                 break
-                
             elif cell_type == STOP:
-                # Hit stop tile - halt movement
                 break
-            
-            # EMPTY cell - continue sliding
         
         end_pos = (r, c)
         gems_collected = frozenset(gems_on_path)
@@ -286,47 +231,19 @@ class ClusterConqueror:
         return end_pos, gems_collected, hit_mine, path
     
     def find_fallback_move(self):
-        """
-        NEW (C5): Find a fallback move when no optimal moves exist.
-        
-        This implements a multi-level fallback strategy:
-        1. Try to find any move that collects at least one gem
-        2. If no gem-collecting move exists, find any valid move
-        3. If no valid move at all, return None
-        
-        Returns:
-            Tuple of (direction, path) or (None, [])
-        """
-        print(f"[NIKHIL C5] 🔄 Finding fallback move from {self.game.ball_pos}")
-        
         current_pos = self.game.ball_pos
         
-        # Priority 1: Find move that collects at least one gem
         gem_move = self._find_best_gem_collecting_move(current_pos)
         if gem_move[0] is not None:
-            print(f"[NIKHIL C5] ✅ Found gem-collecting fallback move")
             return gem_move
         
-        # Priority 2: Find any valid move (even if no gems)
         valid_move = self._find_any_valid_move(current_pos)
         if valid_move[0] is not None:
-            print(f"[NIKHIL C5] ✅ Found valid fallback move (no gems)")
             return valid_move
         
-        # No valid move found
-        print(f"[NIKHIL C5] ❌ No fallback move available")
         return None, []
     
     def _find_best_gem_collecting_move(self, start_pos):
-        """
-        NEW (C5): Find the best move that collects at least one gem.
-        
-        Args:
-            start_pos: Starting position
-        
-        Returns:
-            Tuple of (direction, path) with most gems, or (None, [])
-        """
         best_direction = None
         best_path = []
         best_gem_count = 0
@@ -336,7 +253,6 @@ class ClusterConqueror:
                 start_pos, direction, frozenset()
             )
             
-            # Only consider valid moves that collect gems
             if not hit_mine and end_pos != start_pos and len(gems) > 0:
                 if len(gems) > best_gem_count:
                     best_direction = direction
@@ -346,40 +262,17 @@ class ClusterConqueror:
         return best_direction, best_path
     
     def _find_any_valid_move(self, start_pos):
-        """
-        NEW (C5): Find any valid move that doesn't hit a mine.
-        
-        Args:
-            start_pos: Starting position
-        
-        Returns:
-            Tuple of (direction, path), or (None, [])
-        """
         for direction in self.ALL_DIRECTIONS:
             end_pos, gems, hit_mine, path = self.simulate_move(
                 start_pos, direction, frozenset()
             )
             
-            # Only consider moves that actually move the ball
             if not hit_mine and end_pos != start_pos:
                 return direction, path
         
         return None, []
     
     def calculate_distance_to_cluster(self, pos, cluster):
-        """
-        NEW (C5): Calculate minimum Manhattan distance from position to cluster.
-        
-        This is useful for heuristic evaluation of moves - prefer moves
-        that get closer to target gems.
-        
-        Args:
-            pos: Current position (r, c)
-            cluster: Frozenset of gem positions
-        
-        Returns:
-            int: Minimum Manhattan distance to any gem in cluster
-        """
         if not cluster:
             return float('inf')
         
@@ -391,88 +284,147 @@ class ClusterConqueror:
         return min_distance
     
     def is_valid_direction(self, direction):
-        """
-        Validate if direction is one of the 8 valid directions.
-        
-        Args:
-            direction: Direction tuple (dr, dc)
-        
-        Returns:
-            bool: True if valid, False otherwise
-        """
         if not isinstance(direction, tuple) or len(direction) != 2:
             return False
-        
         return direction in self.ALL_DIRECTIONS
     
     def get_direction_name(self, direction):
-        """
-        Get human-readable name for direction.
-        
-        Args:
-            direction: Direction tuple (dr, dc)
-        
-        Returns:
-            str: Direction name with arrow symbol
-        """
         return self.DIRECTION_NAMES.get(direction, f"UNKNOWN {direction}")
     
     def _is_in_bounds(self, r, c):
-        """
-        Check if position is within grid boundaries.
-        
-        Args:
-            r: Row coordinate
-            c: Column coordinate
-        
-        Returns:
-            bool: True if position is valid, False otherwise
-        """
         return 0 <= r < self.game.rows and 0 <= c < self.game.cols
     
     def get_all_directions(self):
-        """
-        Get all 8 possible directions.
-        
-        Returns:
-            List of direction tuples
-        """
         return self.ALL_DIRECTIONS
+
+
+# ==================== DHIRJA'S MODULE - COMMIT 1/4 ====================
+
+class DPStateManager:
+    """
+    DHIRJA - DP State Management (Commit 1/4)
+    Basic state structure and creation
     
-    def test_all_directions(self, start_pos):
+    Responsibility:
+    - Define DP state format (C1) ✅ NEW
+    - Create states from position and gems (C1) ✅ NEW
+    - Ensure immutability and hashability (C1) ✅ NEW
+    
+    State Format: (position, collected_gems)
+    - position: tuple (row, col)
+    - collected_gems: frozenset of (row, col) tuples
+    
+    TODO (next commits):
+    - Memoization operations (C2)
+    - State statistics (C3)
+    - Advanced utilities (C4)
+    """
+    
+    def __init__(self):
         """
-        Test all 8 directions from a given position.
+        Initialize the DP State Manager.
         
-        Useful for debugging and validation.
+        The memoization table will store:
+        - Key: (position, collected_gems) state
+        - Value: (score, direction, path) result tuple
+        """
+        # Memo table will be added in C2
+        print("[DHIRJA C1] ✅ DPStateManager initialized - State creation ready")
+    
+    def create_state(self, position, collected_gems):
+        """
+        NEW (C1): Create a DP state for memoization.
+        
+        A state uniquely identifies a situation in the game:
+        - Where the ball is (position)
+        - What gems have been collected (collected_gems)
+        
+        Two states are equal if and only if:
+        - Ball is at the same position
+        - Same set of gems have been collected
         
         Args:
-            start_pos: Starting position to test from
+            position: Current position tuple (row, col)
+            collected_gems: Set or frozenset of collected gem positions
         
         Returns:
-            Dict mapping direction to (end_pos, valid_move)
+            Tuple: State in format (position, collected_gems_frozenset)
         """
-        print(f"\n[NIKHIL C5] 🧪 Testing all 8 directions from {start_pos}")
-        print(f"{'='*70}")
+        # Validate position
+        if not isinstance(position, tuple) or len(position) != 2:
+            print(f"[DHIRJA C1] ⚠️  Invalid position format: {position}")
+            return None
         
-        results = {}
+        # Ensure collected_gems is a frozenset (immutable and hashable)
+        if not isinstance(collected_gems, frozenset):
+            collected_gems = frozenset(collected_gems)
         
-        for direction in self.ALL_DIRECTIONS:
-            direction_name = self.get_direction_name(direction)
-            
-            end_pos, gems, hit_mine, path = self.simulate_move(
-                start_pos, direction, frozenset()
-            )
-            
-            valid_move = not hit_mine and end_pos != start_pos
-            results[direction] = (end_pos, valid_move, len(gems), len(path))
-            
-            status = "✅ VALID" if valid_move else "❌ INVALID"
-            print(f"[NIKHIL C5] {direction_name:15s} {status}: {start_pos} → {end_pos}, Gems: {len(gems)}")
+        # Create state tuple
+        state = (position, collected_gems)
         
-        print(f"{'='*70}")
-        print(f"[NIKHIL C5] ✅ All 8 directions tested\n")
+        print(f"[DHIRJA C1] 🔧 Created state: pos={position}, collected={len(collected_gems)} gems")
         
-        return results
+        return state
+    
+    def validate_state(self, state):
+        """
+        NEW (C1): Validate if a state is properly formatted.
+        
+        Args:
+            state: State tuple to validate
+        
+        Returns:
+            bool: True if state is valid, False otherwise
+        """
+        # Check if state is a tuple
+        if not isinstance(state, tuple) or len(state) != 2:
+            print(f"[DHIRJA C1] ❌ Invalid state format: {state}")
+            return False
+        
+        position, collected_gems = state
+        
+        # Validate position
+        if not isinstance(position, tuple) or len(position) != 2:
+            print(f"[DHIRJA C1] ❌ Invalid position in state: {position}")
+            return False
+        
+        # Validate collected_gems
+        if not isinstance(collected_gems, frozenset):
+            print(f"[DHIRJA C1] ❌ collected_gems must be frozenset, got {type(collected_gems)}")
+            return False
+        
+        print(f"[DHIRJA C1] ✅ State validated successfully")
+        return True
+    
+    def get_state_position(self, state):
+        """
+        NEW (C1): Extract position from a state.
+        
+        Args:
+            state: State tuple
+        
+        Returns:
+            tuple: Position (row, col)
+        """
+        if not self.validate_state(state):
+            return None
+        
+        return state[0]
+    
+    def get_state_collected(self, state):
+        """
+        NEW (C1): Extract collected gems from a state.
+        
+        Args:
+            state: State tuple
+        
+        Returns:
+            frozenset: Collected gem positions
+        """
+        if not self.validate_state(state):
+            return frozenset()
+        
+        return state[1]
 
 
 # ==================== GAME CODE ====================
@@ -487,6 +439,9 @@ class InertiaGame:
         
         # Nikhil's module
         self.cluster_conqueror = ClusterConqueror(self)
+        
+        # DHIRJA'S ADDITION: Initialize DP state manager
+        self.dp_state_manager = DPStateManager()
     
     def reset(self):
         """Reset game to initial state"""
@@ -518,6 +473,7 @@ class InertiaGame:
         
         self.gem_divider = GemDivider(self, min_cluster_size=2)
         self.cluster_conqueror = ClusterConqueror(self)
+        self.dp_state_manager = DPStateManager()
     
     def change_map(self, map_name):
         """Change to different map"""
@@ -593,33 +549,43 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        NIKHIL'S FINAL TEST (C5): Test fallback strategies
-        TODO: Dhirja's DP module will be added next (commits 10-13)
+        DHIRJA'S TEST (C1): Test state creation and validation
+        TODO: Badri's recursive solver will use these states (commits 14-16)
         """
-        # Test Nikhil's fallback strategies
+        # Test Dhirja's state management
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Nikhil's ClusterConqueror (C5) - COMPLETE ✅")
+        print("[CPU AI] Testing Dhirja's DPStateManager (C1) - State Creation")
         
-        # Test fallback move
-        print("\n[CPU AI] Testing fallback move strategy...")
-        fallback_dir, fallback_path = self.cluster_conqueror.find_fallback_move()
-        if fallback_dir:
-            print(f"[CPU AI] ✅ Fallback found: {self.cluster_conqueror.get_direction_name(fallback_dir)}")
-        else:
-            print(f"[CPU AI] ❌ No fallback available")
+        # Test 1: Create a basic state
+        print("\n[CPU AI] Test 1: Creating basic state")
+        state1 = self.dp_state_manager.create_state(self.ball_pos, frozenset())
+        if state1:
+            print(f"[CPU AI] ✅ State created: {state1}")
+            valid = self.dp_state_manager.validate_state(state1)
+            print(f"[CPU AI] Validation: {'✅ PASS' if valid else '❌ FAIL'}")
         
-        # Test distance calculation
-        remaining_gems = self.gem_divider.get_remaining_gems()
-        if remaining_gems:
-            distance = self.cluster_conqueror.calculate_distance_to_cluster(
-                self.ball_pos, remaining_gems
-            )
-            print(f"[CPU AI] 📏 Distance to nearest gem: {distance}")
+        # Test 2: Create state with collected gems
+        print("\n[CPU AI] Test 2: Creating state with collected gems")
+        collected = frozenset([(3, 3), (1, 3)])
+        state2 = self.dp_state_manager.create_state(self.ball_pos, collected)
+        if state2:
+            print(f"[CPU AI] ✅ State with gems: pos={state2[0]}, collected={len(state2[1])} gems")
+            
+            # Extract components
+            pos = self.dp_state_manager.get_state_position(state2)
+            gems = self.dp_state_manager.get_state_collected(state2)
+            print(f"[CPU AI] Extracted: position={pos}, gems={len(gems)}")
         
-        print(f"\n🎉 NIKHIL'S MODULE COMPLETE (5/5 commits)")
-        print(f"{'='*70}\n")
+        # Test 3: State equality (different states should be different)
+        print("\n[CPU AI] Test 3: State equality")
+        state3 = self.dp_state_manager.create_state((5, 5), frozenset())
+        print(f"[CPU AI] State1 == State2: {state1 == state2}")
+        print(f"[CPU AI] State1 == State3: {state1 == state3}")
+        print(f"[CPU AI] States are properly distinguishable ✅")
         
-        # Temporary greedy AI (will be replaced by full AI later)
+        print(f"\n{'='*70}\n")
+        
+        # Temporary greedy AI (will be replaced)
         best_direction = None
         best_gems = 0
         best_path = []
@@ -638,7 +604,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 9/16: Nikhil COMPLETE ✅]")
+        self.root.title("Inertia [Commit 10/16: Dhirja - DP State Structure]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -667,7 +633,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 9/16: Nikhil - Fallback Strategies ✅ COMPLETE",
+            text="Commit 10/16: Dhirja - DP State Structure (1/4) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -756,8 +722,7 @@ class InertiaGUI:
             ("🎮 Controls:", "#00d4ff", "bold"),
             ("Arrow Keys / WASD / QEZC", "#ffffff", "normal"),
             ("or", "#a8dadc", "normal"),
-            ("Click Mouse", "#ffffff", "normal"),
-            ("(All 8 Directions!)", "#00d4ff", "normal")
+            ("Click Mouse", "#ffffff", "normal")
         ]
         
         for text, color, weight in instructions:
@@ -1024,7 +989,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"🎉 Nikhil's Module COMPLETE (5/5) ✅")
+               f"Dhirja's Module: 1/4 commits ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -1053,16 +1018,17 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 9/16 - NIKHIL: Fallback Strategies & Utilities ✅ COMPLETE")
+    print("COMMIT 10/16 - DHIRJA: Basic DP State Structure")
     print("=" * 70)
-    print("✅ find_fallback_move() - multi-level fallback strategy")
-    print("✅ calculate_distance_to_cluster() - Manhattan distance")
-    print("✅ _find_best_gem_collecting_move() - gem priority")
-    print("✅ _find_any_valid_move() - safety fallback")
-    print("✅ Complete error handling and edge cases")
-    print("🎉 NIKHIL'S MODULE 100% COMPLETE (5/5 commits)")
-    print("📊 Total Progress: 9/16 commits")
-    print("⏭️  Next: Dhirja's DP State Management (Commits 10-13)")
+    print("✅ DPStateManager class created")
+    print("✅ create_state() - builds state tuples")
+    print("✅ validate_state() - checks state format")
+    print("✅ get_state_position() - extracts position")
+    print("✅ get_state_collected() - extracts collected gems")
+    print("✅ State format: (position, collected_gems_frozenset)")
+    print("📊 Progress: Dhirja 1/4 commits")
+    print("📊 Total Progress: 10/16 commits")
+    print("⏭️  Next: Memoization table operations (C2)")
     print("=" * 70)
     
     root = tk.Tk()
