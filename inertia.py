@@ -1,5 +1,3 @@
-
-
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -298,50 +296,46 @@ class ClusterConqueror:
         return self.ALL_DIRECTIONS
 
 
-# ==================== DHIRJA'S MODULE - COMMIT 1/4 ====================
+# ==================== DHIRJA'S MODULE - COMMIT 2/4 ====================
 
 class DPStateManager:
     """
-    DHIRJA - DP State Management (Commit 1/4)
-    Basic state structure and creation
+    DHIRJA - DP State Management (Commit 2/4)
+    Complete memoization table operations
     
     Responsibility:
-    - Define DP state format (C1) ✅ NEW
-    - Create states from position and gems (C1) ✅ NEW
-    - Ensure immutability and hashability (C1) ✅ NEW
+    - Define DP state format (C1) ✅
+    - Create and validate states (C1) ✅
+    - Store/retrieve memoized results (C2) ✅ NEW
+    - Track memo hits/misses (C2) ✅ NEW
     
-    State Format: (position, collected_gems)
-    - position: tuple (row, col)
-    - collected_gems: frozenset of (row, col) tuples
+    Memoization Table:
+    - Key: state tuple (position, collected_gems)
+    - Value: result tuple (score, direction, path)
     
     TODO (next commits):
-    - Memoization operations (C2)
     - State statistics (C3)
     - Advanced utilities (C4)
     """
     
     def __init__(self):
         """
-        Initialize the DP State Manager.
+        Initialize the DP State Manager with memoization table.
         
-        The memoization table will store:
-        - Key: (position, collected_gems) state
-        - Value: (score, direction, path) result tuple
+        The memo table stores computed results to avoid redundant calculations.
         """
-        # Memo table will be added in C2
-        print("[DHIRJA C1] ✅ DPStateManager initialized - State creation ready")
+        # NEW (C2): Memoization table
+        self.memo = {}
+        
+        # NEW (C2): Performance tracking
+        self.memo_hits = 0
+        self.memo_misses = 0
+        
+        print("[DHIRJA C2] ✅ DPStateManager initialized - Memoization table ready")
     
     def create_state(self, position, collected_gems):
         """
-        NEW (C1): Create a DP state for memoization.
-        
-        A state uniquely identifies a situation in the game:
-        - Where the ball is (position)
-        - What gems have been collected (collected_gems)
-        
-        Two states are equal if and only if:
-        - Ball is at the same position
-        - Same set of gems have been collected
+        Create a DP state for memoization.
         
         Args:
             position: Current position tuple (row, col)
@@ -352,23 +346,20 @@ class DPStateManager:
         """
         # Validate position
         if not isinstance(position, tuple) or len(position) != 2:
-            print(f"[DHIRJA C1] ⚠️  Invalid position format: {position}")
             return None
         
-        # Ensure collected_gems is a frozenset (immutable and hashable)
+        # Ensure collected_gems is a frozenset
         if not isinstance(collected_gems, frozenset):
             collected_gems = frozenset(collected_gems)
         
         # Create state tuple
         state = (position, collected_gems)
         
-        print(f"[DHIRJA C1] 🔧 Created state: pos={position}, collected={len(collected_gems)} gems")
-        
         return state
     
     def validate_state(self, state):
         """
-        NEW (C1): Validate if a state is properly formatted.
+        Validate if a state is properly formatted.
         
         Args:
             state: State tuple to validate
@@ -376,29 +367,110 @@ class DPStateManager:
         Returns:
             bool: True if state is valid, False otherwise
         """
-        # Check if state is a tuple
         if not isinstance(state, tuple) or len(state) != 2:
-            print(f"[DHIRJA C1] ❌ Invalid state format: {state}")
             return False
         
         position, collected_gems = state
         
-        # Validate position
         if not isinstance(position, tuple) or len(position) != 2:
-            print(f"[DHIRJA C1] ❌ Invalid position in state: {position}")
             return False
         
-        # Validate collected_gems
         if not isinstance(collected_gems, frozenset):
-            print(f"[DHIRJA C1] ❌ collected_gems must be frozenset, got {type(collected_gems)}")
             return False
         
-        print(f"[DHIRJA C1] ✅ State validated successfully")
         return True
+    
+    def clear_memo(self):
+        """
+        NEW (C2): Clear the memoization table and reset statistics.
+        
+        This should be called at the start of each new search to ensure
+        fresh state and prevent using stale cached results.
+        """
+        self.memo.clear()
+        self.memo_hits = 0
+        self.memo_misses = 0
+        
+        print(f"[DHIRJA C2] 🧹 Memo table cleared - Ready for new search")
+    
+    def has_state(self, state):
+        """
+        NEW (C2): Check if a state exists in the memoization table.
+        
+        Args:
+            state: State tuple to check
+        
+        Returns:
+            bool: True if state is memoized, False otherwise
+        """
+        if not self.validate_state(state):
+            return False
+        
+        return state in self.memo
+    
+    def get_memo(self, state):
+        """
+        NEW (C2): Retrieve memoized result for a state.
+        
+        This is the core DP optimization - if we've already computed
+        the result for this state, we can return it immediately without
+        recomputing.
+        
+        Args:
+            state: State tuple to look up
+        
+        Returns:
+            Tuple of (score, direction, path) if cached, None otherwise
+        """
+        if not self.validate_state(state):
+            print(f"[DHIRJA C2] ⚠️  Invalid state for get_memo")
+            return None
+        
+        if state in self.memo:
+            self.memo_hits += 1
+            result = self.memo[state]
+            print(f"[DHIRJA C2] 🎯 MEMO HIT! State found, hits={self.memo_hits}")
+            return result
+        else:
+            self.memo_misses += 1
+            print(f"[DHIRJA C2] ❌ MEMO MISS. State not cached, misses={self.memo_misses}")
+            return None
+    
+    def set_memo(self, state, score, direction, path):
+        """
+        NEW (C2): Store a computed result in the memoization table.
+        
+        After computing the best move from a state, we store it so
+        we don't need to recompute if we encounter the same state again.
+        
+        Args:
+            state: State tuple
+            score: Best score achieved from this state
+            direction: Best direction to take from this state
+            path: Best path from this state
+        """
+        if not self.validate_state(state):
+            print(f"[DHIRJA C2] ⚠️  Invalid state for set_memo")
+            return
+        
+        # Store result as tuple
+        result = (score, direction, path)
+        self.memo[state] = result
+        
+        print(f"[DHIRJA C2] 💾 Stored result for state, memo_size={len(self.memo)}")
+    
+    def get_memo_size(self):
+        """
+        NEW (C2): Get the current size of the memoization table.
+        
+        Returns:
+            int: Number of states stored
+        """
+        return len(self.memo)
     
     def get_state_position(self, state):
         """
-        NEW (C1): Extract position from a state.
+        Extract position from a state.
         
         Args:
             state: State tuple
@@ -413,7 +485,7 @@ class DPStateManager:
     
     def get_state_collected(self, state):
         """
-        NEW (C1): Extract collected gems from a state.
+        Extract collected gems from a state.
         
         Args:
             state: State tuple
@@ -434,13 +506,8 @@ class InertiaGame:
         self.map_name = map_name
         self.reset()
         
-        # Sukant's module
         self.gem_divider = GemDivider(self, min_cluster_size=2)
-        
-        # Nikhil's module
         self.cluster_conqueror = ClusterConqueror(self)
-        
-        # DHIRJA'S ADDITION: Initialize DP state manager
         self.dp_state_manager = DPStateManager()
     
     def reset(self):
@@ -549,39 +616,60 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        DHIRJA'S TEST (C1): Test state creation and validation
-        TODO: Badri's recursive solver will use these states (commits 14-16)
+        DHIRJA'S TEST (C2): Test memoization operations
+        TODO: Badri's recursive solver will use memoization (commits 14-16)
         """
-        # Test Dhirja's state management
+        # Test Dhirja's memoization operations
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Dhirja's DPStateManager (C1) - State Creation")
+        print("[CPU AI] Testing Dhirja's DPStateManager (C2) - Memoization")
         
-        # Test 1: Create a basic state
-        print("\n[CPU AI] Test 1: Creating basic state")
+        # Test 1: Clear memo and check initial state
+        print("\n[CPU AI] Test 1: Clear memo")
+        self.dp_state_manager.clear_memo()
+        print(f"[CPU AI] ✅ Memo size after clear: {self.dp_state_manager.get_memo_size()}")
+        
+        # Test 2: Create and store some states
+        print("\n[CPU AI] Test 2: Store states in memo")
         state1 = self.dp_state_manager.create_state(self.ball_pos, frozenset())
-        if state1:
-            print(f"[CPU AI] ✅ State created: {state1}")
-            valid = self.dp_state_manager.validate_state(state1)
-            print(f"[CPU AI] Validation: {'✅ PASS' if valid else '❌ FAIL'}")
+        self.dp_state_manager.set_memo(state1, 1000, RIGHT, [(3, 0), (3, 1)])
         
-        # Test 2: Create state with collected gems
-        print("\n[CPU AI] Test 2: Creating state with collected gems")
-        collected = frozenset([(3, 3), (1, 3)])
-        state2 = self.dp_state_manager.create_state(self.ball_pos, collected)
-        if state2:
-            print(f"[CPU AI] ✅ State with gems: pos={state2[0]}, collected={len(state2[1])} gems")
-            
-            # Extract components
-            pos = self.dp_state_manager.get_state_position(state2)
-            gems = self.dp_state_manager.get_state_collected(state2)
-            print(f"[CPU AI] Extracted: position={pos}, gems={len(gems)}")
+        state2 = self.dp_state_manager.create_state((5, 5), frozenset([(3, 3)]))
+        self.dp_state_manager.set_memo(state2, 2000, DOWN, [(5, 5), (6, 5)])
         
-        # Test 3: State equality (different states should be different)
-        print("\n[CPU AI] Test 3: State equality")
-        state3 = self.dp_state_manager.create_state((5, 5), frozenset())
-        print(f"[CPU AI] State1 == State2: {state1 == state2}")
-        print(f"[CPU AI] State1 == State3: {state1 == state3}")
-        print(f"[CPU AI] States are properly distinguishable ✅")
+        print(f"[CPU AI] ✅ Stored 2 states, memo size: {self.dp_state_manager.get_memo_size()}")
+        
+        # Test 3: Check if states exist
+        print("\n[CPU AI] Test 3: Check state existence")
+        exists1 = self.dp_state_manager.has_state(state1)
+        exists2 = self.dp_state_manager.has_state(state2)
+        state3 = self.dp_state_manager.create_state((7, 7), frozenset())
+        exists3 = self.dp_state_manager.has_state(state3)
+        
+        print(f"[CPU AI] State1 exists: {exists1} ✅")
+        print(f"[CPU AI] State2 exists: {exists2} ✅")
+        print(f"[CPU AI] State3 exists: {exists3} (should be False)")
+        
+        # Test 4: Retrieve memoized results
+        print("\n[CPU AI] Test 4: Retrieve memo results")
+        result1 = self.dp_state_manager.get_memo(state1)
+        result2 = self.dp_state_manager.get_memo(state2)
+        result3 = self.dp_state_manager.get_memo(state3)
+        
+        if result1:
+            score, direction, path = result1
+            print(f"[CPU AI] ✅ Retrieved state1: score={score}, direction={direction}")
+        
+        if result2:
+            score, direction, path = result2
+            print(f"[CPU AI] ✅ Retrieved state2: score={score}, direction={direction}")
+        
+        print(f"[CPU AI] State3 result: {result3} (should be None)")
+        
+        # Test 5: Check hit/miss stats
+        print(f"\n[CPU AI] Test 5: Memo statistics")
+        print(f"[CPU AI] 📊 Memo hits: {self.dp_state_manager.memo_hits}")
+        print(f"[CPU AI] 📊 Memo misses: {self.dp_state_manager.memo_misses}")
+        print(f"[CPU AI] 📊 Memo size: {self.dp_state_manager.get_memo_size()}")
         
         print(f"\n{'='*70}\n")
         
@@ -604,7 +692,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 10/16: Dhirja - DP State Structure]")
+        self.root.title("Inertia [Commit 11/16: Dhirja - Memoization Ops]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -633,7 +721,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 10/16: Dhirja - DP State Structure (1/4) ✅",
+            text="Commit 11/16: Dhirja - Memoization Table Ops (2/4) ✅",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -989,7 +1077,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Dhirja's Module: 1/4 commits ✅")
+               f"Dhirja's Module: 2/4 commits ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -1018,17 +1106,18 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 10/16 - DHIRJA: Basic DP State Structure")
+    print("COMMIT 11/16 - DHIRJA: Memoization Table Operations")
     print("=" * 70)
-    print("✅ DPStateManager class created")
-    print("✅ create_state() - builds state tuples")
-    print("✅ validate_state() - checks state format")
-    print("✅ get_state_position() - extracts position")
-    print("✅ get_state_collected() - extracts collected gems")
-    print("✅ State format: (position, collected_gems_frozenset)")
-    print("📊 Progress: Dhirja 1/4 commits")
-    print("📊 Total Progress: 10/16 commits")
-    print("⏭️  Next: Memoization table operations (C2)")
+    print("✅ memo dictionary added")
+    print("✅ clear_memo() - reset table")
+    print("✅ has_state() - check if cached")
+    print("✅ get_memo() - retrieve result")
+    print("✅ set_memo() - store result")
+    print("✅ get_memo_size() - table size")
+    print("✅ Memo hit/miss tracking")
+    print("📊 Progress: Dhirja 2/4 commits")
+    print("📊 Total Progress: 11/16 commits")
+    print("⏭️  Next: State statistics and analysis (C3)")
     print("=" * 70)
     
     root = tk.Tk()
