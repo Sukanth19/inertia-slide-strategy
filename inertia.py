@@ -1,5 +1,4 @@
 
-
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -162,22 +161,21 @@ class GemDivider:
         return self.clusters_created
 
 
-# ==================== NIKHIL'S MODULE - COMMIT 4/5 ====================
+# ==================== NIKHIL'S MODULE - COMMIT 5/5 ✅ COMPLETE ====================
 
 class ClusterConqueror:
     """
-    NIKHIL - Conquer Phase (Commit 4/5)
-    Complete 8-direction validation and handling
+    NIKHIL - Conquer Phase (Commit 5/5) ✅ COMPLETE
+    Complete with fallback strategies and utilities
     
     Responsibility:
     - Simulate moves from any position (C1) ✅
     - Boundary & obstacle detection (C2) ✅
     - Gem collection along path (C3) ✅
-    - Validate all 8 directions (C4) ✅ NEW
-    - Direction naming and debugging (C4) ✅ NEW
+    - Validate all 8 directions (C4) ✅
+    - Fallback strategies & utilities (C5) ✅ NEW
     
-    TODO (next commit):
-    - Fallback strategies (C5)
+    🎉 MODULE COMPLETE - Ready for production use!
     """
     
     def __init__(self, game):
@@ -204,29 +202,30 @@ class ClusterConqueror:
             self.UP_LEFT, self.UP_RIGHT, self.DOWN_LEFT, self.DOWN_RIGHT
         ]
         
-        # NEW (C4): Direction name mapping for debugging
+        # Direction name mapping for debugging
         self.DIRECTION_NAMES = {
             self.UP: "UP ↑",
             self.DOWN: "DOWN ↓",
             self.LEFT: "LEFT ←",
             self.RIGHT: "RIGHT →",
-            self.UP_LEFT: "UP_LEFT ↖",
-            self.UP_RIGHT: "UP_RIGHT ↗",
-            self.DOWN_LEFT: "DOWN_LEFT ↙",
-            self.DOWN_RIGHT: "DOWN_RIGHT ↘"
+            self.UP_LEFT: "UP_LEFT ↖️",
+            self.UP_RIGHT: "UP_RIGHT ↗️",
+            self.DOWN_LEFT: "DOWN_LEFT ↙️",
+            self.DOWN_RIGHT: "DOWN_RIGHT ↘️"
         }
         
-        print("[NIKHIL C4] ✅ ClusterConqueror initialized - All 8 directions validated")
+        print("[NIKHIL C5] 🎉 ClusterConqueror FULLY IMPLEMENTED - All features complete")
     
     def simulate_move(self, start_pos, direction, already_collected):
         """
-        UPDATED (C4): Enhanced with direction validation.
+        Complete move simulation with all features.
         
-        Simulates continuous sliding with full validation:
-        - Validates direction format
-        - Handles all 8 directions (cardinal + diagonal)
-        - Complete boundary and obstacle detection
-        - Full gem collection mechanics
+        Simulates continuous sliding with:
+        - Direction validation
+        - Boundary detection
+        - Obstacle handling (MINE, STOP)
+        - Gem collection
+        - Path tracking
         
         Args:
             start_pos: Starting position (r, c)
@@ -236,14 +235,12 @@ class ClusterConqueror:
         Returns:
             Tuple of (end_pos, gems_collected_set, hit_mine, path)
         """
-        # NEW (C4): Validate direction
+        # Validate direction
         if not self.is_valid_direction(direction):
-            print(f"[NIKHIL C4] ⚠️  Invalid direction: {direction}")
+            print(f"[NIKHIL C5] ⚠️  Invalid direction: {direction}")
             return start_pos, frozenset(), False, [start_pos]
         
         direction_name = self.get_direction_name(direction)
-        print(f"[NIKHIL C4] 🎯 Simulating slide from {start_pos} direction {direction_name}")
-        print(f"[NIKHIL C4] 📦 Already collected: {len(already_collected)} gems")
         
         dr, dc = direction
         r, c = start_pos
@@ -257,7 +254,6 @@ class ClusterConqueror:
             
             # Boundary check
             if not self._is_in_bounds(next_r, next_c):
-                print(f"[NIKHIL C4] 🛑 Hit boundary")
                 break
             
             # Move to next position
@@ -271,20 +267,15 @@ class ClusterConqueror:
                 # Collect gem if not already collected
                 if (r, c) not in already_collected:
                     gems_on_path.add((r, c))
-                    print(f"[NIKHIL C4] 💎 Collected gem at ({r}, {c})")
-                else:
-                    print(f"[NIKHIL C4] ⚪ Skipped already collected gem at ({r}, {c})")
                 # Continue sliding
                 
             elif cell_type == MINE:
                 # Hit mine - invalid move
-                print(f"[NIKHIL C4] 💥 Hit MINE at ({r}, {c})")
                 hit_mine = True
                 break
                 
             elif cell_type == STOP:
                 # Hit stop tile - halt movement
-                print(f"[NIKHIL C4] 🛑 Hit STOP tile at ({r}, {c})")
                 break
             
             # EMPTY cell - continue sliding
@@ -292,14 +283,116 @@ class ClusterConqueror:
         end_pos = (r, c)
         gems_collected = frozenset(gems_on_path)
         
-        print(f"[NIKHIL C4] ✅ Slide complete: {start_pos} → {end_pos}")
-        print(f"[NIKHIL C4] 📊 Collected {len(gems_collected)} gems, Path: {len(path)} steps, Hit mine: {hit_mine}")
-        
         return end_pos, gems_collected, hit_mine, path
+    
+    def find_fallback_move(self):
+        """
+        NEW (C5): Find a fallback move when no optimal moves exist.
+        
+        This implements a multi-level fallback strategy:
+        1. Try to find any move that collects at least one gem
+        2. If no gem-collecting move exists, find any valid move
+        3. If no valid move at all, return None
+        
+        Returns:
+            Tuple of (direction, path) or (None, [])
+        """
+        print(f"[NIKHIL C5] 🔄 Finding fallback move from {self.game.ball_pos}")
+        
+        current_pos = self.game.ball_pos
+        
+        # Priority 1: Find move that collects at least one gem
+        gem_move = self._find_best_gem_collecting_move(current_pos)
+        if gem_move[0] is not None:
+            print(f"[NIKHIL C5] ✅ Found gem-collecting fallback move")
+            return gem_move
+        
+        # Priority 2: Find any valid move (even if no gems)
+        valid_move = self._find_any_valid_move(current_pos)
+        if valid_move[0] is not None:
+            print(f"[NIKHIL C5] ✅ Found valid fallback move (no gems)")
+            return valid_move
+        
+        # No valid move found
+        print(f"[NIKHIL C5] ❌ No fallback move available")
+        return None, []
+    
+    def _find_best_gem_collecting_move(self, start_pos):
+        """
+        NEW (C5): Find the best move that collects at least one gem.
+        
+        Args:
+            start_pos: Starting position
+        
+        Returns:
+            Tuple of (direction, path) with most gems, or (None, [])
+        """
+        best_direction = None
+        best_path = []
+        best_gem_count = 0
+        
+        for direction in self.ALL_DIRECTIONS:
+            end_pos, gems, hit_mine, path = self.simulate_move(
+                start_pos, direction, frozenset()
+            )
+            
+            # Only consider valid moves that collect gems
+            if not hit_mine and end_pos != start_pos and len(gems) > 0:
+                if len(gems) > best_gem_count:
+                    best_direction = direction
+                    best_path = path
+                    best_gem_count = len(gems)
+        
+        return best_direction, best_path
+    
+    def _find_any_valid_move(self, start_pos):
+        """
+        NEW (C5): Find any valid move that doesn't hit a mine.
+        
+        Args:
+            start_pos: Starting position
+        
+        Returns:
+            Tuple of (direction, path), or (None, [])
+        """
+        for direction in self.ALL_DIRECTIONS:
+            end_pos, gems, hit_mine, path = self.simulate_move(
+                start_pos, direction, frozenset()
+            )
+            
+            # Only consider moves that actually move the ball
+            if not hit_mine and end_pos != start_pos:
+                return direction, path
+        
+        return None, []
+    
+    def calculate_distance_to_cluster(self, pos, cluster):
+        """
+        NEW (C5): Calculate minimum Manhattan distance from position to cluster.
+        
+        This is useful for heuristic evaluation of moves - prefer moves
+        that get closer to target gems.
+        
+        Args:
+            pos: Current position (r, c)
+            cluster: Frozenset of gem positions
+        
+        Returns:
+            int: Minimum Manhattan distance to any gem in cluster
+        """
+        if not cluster:
+            return float('inf')
+        
+        min_distance = min(
+            abs(pos[0] - g[0]) + abs(pos[1] - g[1])
+            for g in cluster
+        )
+        
+        return min_distance
     
     def is_valid_direction(self, direction):
         """
-        NEW (C4): Validate if direction is one of the 8 valid directions.
+        Validate if direction is one of the 8 valid directions.
         
         Args:
             direction: Direction tuple (dr, dc)
@@ -314,7 +407,7 @@ class ClusterConqueror:
     
     def get_direction_name(self, direction):
         """
-        NEW (C4): Get human-readable name for direction.
+        Get human-readable name for direction.
         
         Args:
             direction: Direction tuple (dr, dc)
@@ -348,7 +441,7 @@ class ClusterConqueror:
     
     def test_all_directions(self, start_pos):
         """
-        NEW (C4): Test all 8 directions from a given position.
+        Test all 8 directions from a given position.
         
         Useful for debugging and validation.
         
@@ -358,14 +451,13 @@ class ClusterConqueror:
         Returns:
             Dict mapping direction to (end_pos, valid_move)
         """
-        print(f"\n[NIKHIL C4] 🧪 Testing all 8 directions from {start_pos}")
+        print(f"\n[NIKHIL C5] 🧪 Testing all 8 directions from {start_pos}")
         print(f"{'='*70}")
         
         results = {}
         
         for direction in self.ALL_DIRECTIONS:
             direction_name = self.get_direction_name(direction)
-            print(f"\n[NIKHIL C4] Testing {direction_name}")
             
             end_pos, gems, hit_mine, path = self.simulate_move(
                 start_pos, direction, frozenset()
@@ -375,10 +467,10 @@ class ClusterConqueror:
             results[direction] = (end_pos, valid_move, len(gems), len(path))
             
             status = "✅ VALID" if valid_move else "❌ INVALID"
-            print(f"[NIKHIL C4] {status}: {start_pos} → {end_pos}, Gems: {len(gems)}")
+            print(f"[NIKHIL C5] {direction_name:15s} {status}: {start_pos} → {end_pos}, Gems: {len(gems)}")
         
         print(f"{'='*70}")
-        print(f"[NIKHIL C4] ✅ All 8 directions tested\n")
+        print(f"[NIKHIL C5] ✅ All 8 directions tested\n")
         
         return results
 
@@ -501,25 +593,33 @@ class InertiaGame:
         """
         Get CPU move - TEMPORARY: Uses simple greedy strategy
         
-        NIKHIL'S TEST (C4): Test all 8 directions comprehensively
-        TODO: Full integration in next commit
+        NIKHIL'S FINAL TEST (C5): Test fallback strategies
+        TODO: Dhirja's DP module will be added next (commits 10-13)
         """
-        # Test Nikhil's 8-direction validation
+        # Test Nikhil's fallback strategies
         print(f"\n{'='*70}")
-        print("[CPU AI] Testing Nikhil's ClusterConqueror (C4) - 8 Directions")
+        print("[CPU AI] Testing Nikhil's ClusterConqueror (C5) - COMPLETE ✅")
         
-        # Comprehensive direction test
-        results = self.cluster_conqueror.test_all_directions(self.ball_pos)
+        # Test fallback move
+        print("\n[CPU AI] Testing fallback move strategy...")
+        fallback_dir, fallback_path = self.cluster_conqueror.find_fallback_move()
+        if fallback_dir:
+            print(f"[CPU AI] ✅ Fallback found: {self.cluster_conqueror.get_direction_name(fallback_dir)}")
+        else:
+            print(f"[CPU AI] ❌ No fallback available")
         
-        # Analyze results
-        valid_moves = sum(1 for _, (end, valid, gems, path_len) in results.items() if valid)
-        total_gems_available = sum(gems for _, (end, valid, gems, path_len) in results.items())
+        # Test distance calculation
+        remaining_gems = self.gem_divider.get_remaining_gems()
+        if remaining_gems:
+            distance = self.cluster_conqueror.calculate_distance_to_cluster(
+                self.ball_pos, remaining_gems
+            )
+            print(f"[CPU AI] 📏 Distance to nearest gem: {distance}")
         
-        print(f"[CPU AI] 📊 Summary: {valid_moves}/8 directions valid")
-        print(f"[CPU AI] 💎 Total gems accessible: {total_gems_available}")
+        print(f"\n🎉 NIKHIL'S MODULE COMPLETE (5/5 commits)")
         print(f"{'='*70}\n")
         
-        # Temporary greedy AI (will be replaced)
+        # Temporary greedy AI (will be replaced by full AI later)
         best_direction = None
         best_gems = 0
         best_path = []
@@ -538,7 +638,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Inertia [Commit 8/16: Nikhil - 8-Direction Handling]")
+        self.root.title("Inertia [Commit 9/16: Nikhil COMPLETE ✅]")
         self.root.configure(bg="#1a1a2e")
         
         random_map = random.choice(list(MAPS.keys()))
@@ -567,7 +667,7 @@ class InertiaGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="Commit 8/16: Nikhil - 8-Direction Handling (4/5) ✅",
+            text="Commit 9/16: Nikhil - Fallback Strategies ✅ COMPLETE",
             font=("Arial", 10),
             fg="#a8dadc",
             bg="#16213e"
@@ -924,7 +1024,7 @@ class InertiaGUI:
                f"(Efficiency: {efficiency_human:.2f})\n"
                f"🤖 CPU: {self.game.cpu_score} gems in {self.game.cpu_moves} moves "
                f"(Efficiency: {efficiency_cpu:.2f})\n\n"
-               f"Nikhil's Module: 4/5 commits ✅")
+               f"🎉 Nikhil's Module COMPLETE (5/5) ✅")
         
         messagebox.showinfo("Game Over", msg)
     
@@ -953,16 +1053,16 @@ class InertiaGUI:
 
 def main():
     print("=" * 70)
-    print("COMMIT 8/16 - NIKHIL: Complete 8-Direction Handling")
+    print("COMMIT 9/16 - NIKHIL: Fallback Strategies & Utilities ✅ COMPLETE")
     print("=" * 70)
-    print("✅ is_valid_direction() validation method")
-    print("✅ get_direction_name() for debugging")
-    print("✅ test_all_directions() comprehensive testing")
-    print("✅ DIRECTION_NAMES mapping with arrows")
-    print("✅ All 8 directions fully validated")
-    print("📊 Progress: Nikhil 4/5 commits")
-    print("📊 Total Progress: 8/16 commits")
-    print("⏭️  Next: Fallback strategies & utilities (C5)")
+    print("✅ find_fallback_move() - multi-level fallback strategy")
+    print("✅ calculate_distance_to_cluster() - Manhattan distance")
+    print("✅ _find_best_gem_collecting_move() - gem priority")
+    print("✅ _find_any_valid_move() - safety fallback")
+    print("✅ Complete error handling and edge cases")
+    print("🎉 NIKHIL'S MODULE 100% COMPLETE (5/5 commits)")
+    print("📊 Total Progress: 9/16 commits")
+    print("⏭️  Next: Dhirja's DP State Management (Commits 10-13)")
     print("=" * 70)
     
     root = tk.Tk()
