@@ -70,6 +70,9 @@ class GridRegion:
         self.rows = row_end - row_start
         self.cols = col_end - col_start
         self.gems = self._extract_gems(all_gems)
+        
+        # SUKANTH 1.4: Store boundary cells (will be set externally)
+        self.boundaries = {'north': [], 'south': [], 'east': [], 'west': []}
     
     def _extract_gems(self, all_gems):
         region_gems = set()
@@ -85,16 +88,18 @@ class GridRegion:
         r, c = pos
         return (self.row_start <= r < self.row_end and 
                 self.col_start <= c < self.col_end)
+    
+    def is_on_boundary(self, pos):
+        """SUKANTH 1.4: Check if position is on region boundary"""
+        r, c = pos
+        return (r == self.row_start or r == self.row_end - 1 or
+                c == self.col_start or c == self.col_end - 1)
 
 
-# ========== SUKANTH 1.3: RECURSIVE BISECTION (DIVIDE) ==========
+# ========== SUKANTH 1.3: RECURSIVE BISECTION ==========
 
 class DivideConquerSplitter:
-    """
-    SUKANTH 1.3: Implements the DIVIDE step of Divide & Conquer.
-    Recursively splits grid into smaller regions until base case.
-    """
-    
+    """SUKANTH 1.3"""
     def __init__(self, board, rows, cols, split_threshold=25):
         self.board = board
         self.rows = rows
@@ -102,87 +107,153 @@ class DivideConquerSplitter:
         self.split_threshold = split_threshold
     
     def recursive_split(self, region, depth=0):
-        """
-        SUKANTH 1.3: Core DIVIDE algorithm.
-        
-        Recursively splits region into two halves:
-        - Alternates between vertical and horizontal splits
-        - Continues until region size <= threshold (base case)
-        - Returns list of all leaf regions
-        """
-        print(f"[SUKANTH-1.3-DIVIDE] Depth {depth}: Region {region.rows}x{region.cols}, {len(region.gems)} gems")
-        
-        # BASE CASE: Region small enough
         if region.size() <= self.split_threshold:
-            print(f"[SUKANTH-1.3-BASE] Reached base case at depth {depth}")
             return [region]
         
-        # RECURSIVE CASE: Split region
         left_region, right_region = self._bisect_region(region, depth)
-        
-        # Recursively split left half
         left_results = self.recursive_split(left_region, depth + 1)
-        
-        # Recursively split right half
         right_results = self.recursive_split(right_region, depth + 1)
         
-        # Combine results
         return left_results + right_results
     
     def _bisect_region(self, region, depth):
-        """
-        SUKANTH 1.3: Split a region into two halves.
-        
-        Alternates split direction:
-        - Even depth: vertical split (divide columns)
-        - Odd depth: horizontal split (divide rows)
-        
-        This creates a balanced binary tree of regions.
-        """
-        # Alternate split direction
         split_vertically = (depth % 2 == 0)
         
         if split_vertically:
-            # Split along vertical line
             mid_col = region.col_start + region.cols // 2
-            
-            left_region = GridRegion(
-                self.board,
-                region.row_start, region.row_end,
-                region.col_start, mid_col,
-                region.gems
-            )
-            
-            right_region = GridRegion(
-                self.board,
-                region.row_start, region.row_end,
-                mid_col, region.col_end,
-                region.gems
-            )
-            
-            print(f"[SUKANTH-1.3-SPLIT] Vertical split at col {mid_col}")
-            
+            left_region = GridRegion(self.board, region.row_start, region.row_end,
+                                    region.col_start, mid_col, region.gems)
+            right_region = GridRegion(self.board, region.row_start, region.row_end,
+                                     mid_col, region.col_end, region.gems)
         else:
-            # Split along horizontal line
             mid_row = region.row_start + region.rows // 2
-            
-            left_region = GridRegion(
-                self.board,
-                region.row_start, mid_row,
-                region.col_start, region.col_end,
-                region.gems
-            )
-            
-            right_region = GridRegion(
-                self.board,
-                mid_row, region.row_end,
-                region.col_start, region.col_end,
-                region.gems
-            )
-            
-            print(f"[SUKANTH-1.3-SPLIT] Horizontal split at row {mid_row}")
+            left_region = GridRegion(self.board, region.row_start, mid_row,
+                                    region.col_start, region.col_end, region.gems)
+            right_region = GridRegion(self.board, mid_row, region.row_end,
+                                     region.col_start, region.col_end, region.gems)
         
         return left_region, right_region
+
+
+# ========== SUKANTH 1.4: BOUNDARY DETECTION & STATE TRACKING ==========
+
+class BoundaryDetector:
+    """
+    SUKANTH 1.4: Identifies boundary cells for region interfaces.
+    
+    Critical for D&C COMBINE phase:
+    - Boundaries are where subproblems connect
+    - Need to track which cells form region edges
+    - States at boundaries enable solution merging
+    """
+    
+    def __init__(self, board):
+        self.board = board
+    
+    def detect_boundaries(self, region):
+        """
+        SUKANTH 1.4: Find all boundary cells of a region.
+        
+        Boundaries are cells on the edge of the region that:
+        1. Are not mines
+        2. Can serve as entry/exit points
+        """
+        boundaries = {
+            'north': [],   # Top edge
+            'south': [],   # Bottom edge
+            'east': [],    # Right edge
+            'west': []     # Left edge
+        }
+        
+        # North boundary (top row)
+        for c in range(region.col_start, region.col_end):
+            pos = (region.row_start, c)
+            if self.board[pos[0]][pos[1]] != MINE:
+                boundaries['north'].append(pos)
+        
+        # South boundary (bottom row)
+        for c in range(region.col_start, region.col_end):
+            pos = (region.row_end - 1, c)
+            if self.board[pos[0]][pos[1]] != MINE:
+                boundaries['south'].append(pos)
+        
+        # West boundary (left column)
+        for r in range(region.row_start, region.row_end):
+            pos = (r, region.col_start)
+            if self.board[pos[0]][pos[1]] != MINE:
+                boundaries['west'].append(pos)
+        
+        # East boundary (right column)
+        for r in range(region.row_start, region.row_end):
+            pos = (r, region.col_end - 1)
+            if self.board[pos[0]][pos[1]] != MINE:
+                boundaries['east'].append(pos)
+        
+        # Remove duplicates (corners appear in two lists)
+        for direction in boundaries:
+            boundaries[direction] = list(set(boundaries[direction]))
+        
+        total = sum(len(v) for v in boundaries.values())
+        print(f"[SUKANTH-1.4-BOUNDARY] Region [{region.row_start}:{region.row_end}, "
+              f"{region.col_start}:{region.col_end}]: {total} boundary cells")
+        
+        return boundaries
+    
+    def get_all_boundary_positions(self, region):
+        """
+        SUKANTH 1.4: Get flattened list of all boundary positions.
+        Used for state tracking.
+        """
+        boundaries = self.detect_boundaries(region)
+        all_positions = []
+        for positions in boundaries.values():
+            all_positions.extend(positions)
+        
+        # Remove duplicates
+        return list(set(all_positions))
+
+
+class BoundaryStateTracker:
+    """
+    SUKANTH 1.4: Tracks states at region boundaries.
+    
+    For D&C COMBINE:
+    - Each boundary position can have multiple states
+    - State = (position, gems_collected, score)
+    - Used to match exit states from one region with entry states to next
+    """
+    
+    def __init__(self):
+        self.boundary_states = {}  # boundary_pos → list of states
+    
+    def add_state(self, boundary_pos, gems_collected, score, path):
+        """
+        SUKANTH 1.4: Add a state at a boundary position.
+        Multiple states possible at same position (different gem collections).
+        """
+        if boundary_pos not in self.boundary_states:
+            self.boundary_states[boundary_pos] = []
+        
+        state = {
+            'position': boundary_pos,
+            'gems': frozenset(gems_collected),
+            'score': score,
+            'path': path
+        }
+        
+        self.boundary_states[boundary_pos].append(state)
+    
+    def get_states_at(self, boundary_pos):
+        """SUKANTH 1.4: Get all states at a boundary position"""
+        return self.boundary_states.get(boundary_pos, [])
+    
+    def get_all_boundary_positions(self):
+        """SUKANTH 1.4: Get all boundary positions that have states"""
+        return list(self.boundary_states.keys())
+    
+    def count_states(self):
+        """SUKANTH 1.4: Total number of states tracked"""
+        return sum(len(states) for states in self.boundary_states.values())
 
 
 class InertiaGame:
@@ -192,8 +263,10 @@ class InertiaGame:
         self.graph = {}
         self.cell_types = {}
         self.root_region = None
-        self.dc_splitter = None  # NEW
-        self.leaf_regions = []    # NEW: Will hold all base-case regions
+        self.dc_splitter = None
+        self.leaf_regions = []
+        self.boundary_detector = None  # NEW: SUKANTH 1.4
+        self.region_boundaries = {}     # NEW: region_id → boundaries
         self.reset()
     
     def reset(self):
@@ -220,11 +293,25 @@ class InertiaGame:
         all_gems = set(map_data["gems"])
         self.root_region = GridRegion(self.board, 0, self.rows, 0, self.cols, all_gems)
         
-        # SUKANTH 1.3: Recursively split grid (DIVIDE step)
+        # SUKANTH 1.3: Recursively split grid
         self.dc_splitter = DivideConquerSplitter(self.board, self.rows, self.cols)
         self.leaf_regions = self.dc_splitter.recursive_split(self.root_region, depth=0)
         
-        print(f"[SUKANTH-1.3-RESULT] Grid split into {len(self.leaf_regions)} base regions")
+        # SUKANTH 1.4: Detect boundaries for each region
+        self.boundary_detector = BoundaryDetector(self.board)
+        self.region_boundaries = {}
+        
+        for i, region in enumerate(self.leaf_regions):
+            boundaries = self.boundary_detector.detect_boundaries(region)
+            self.region_boundaries[i] = boundaries
+            
+            # Store in region object
+            region.boundaries = boundaries
+        
+        print(f"[SUKANTH-1.4-COMPLETE] D&C DIVIDE phase complete:")
+        print(f"  - {len(self.leaf_regions)} regions")
+        print(f"  - Boundaries detected for all regions")
+        print(f"  - Ready for CONQUER phase (Nikhil)")
     
     def simulate_move(self, direction):
         dr, dc = direction
@@ -246,7 +333,7 @@ class InertiaGame:
         return (r, c), gems, hit_mine, path
     
     def get_cpu_move(self):
-        """Simple greedy AI"""
+        """Simple greedy AI - will be replaced by D&C+DP"""
         best_dir, best_score, best_path = None, -999999, []
         
         for direction in ALL_DIRECTIONS:
@@ -305,7 +392,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("INERTIA [C1.3: Sukanth-Bisection]")
+        self.root.title("INERTIA [C1.4: Sukanth-COMPLETE]")
         
         self.colors = {
             'bg_darkest': '#0d0221', 'bg_dark': '#1a0b2e', 'bg_medium': '#2d1b4e',
@@ -341,8 +428,8 @@ class InertiaGUI:
         tk.Label(title_inner, text="⬢  I N E R T I A  ⬢", font=("Helvetica", 42, "bold"),
                 fg=self.colors['accent_cyan'], bg=self.colors['bg_dark']).pack()
         
-        tk.Label(title_inner, text="C1.3: SUKANTH - Recursive Bisection (DIVIDE)",
-                font=("Courier", 11, "bold"), fg=self.colors['accent_purple'], bg=self.colors['bg_dark']).pack(pady=(8, 0))
+        tk.Label(title_inner, text="C1.4: SUKANTH - Boundary Detection (D&C COMPLETE)",
+                font=("Courier", 10, "bold"), fg=self.colors['accent_purple'], bg=self.colors['bg_dark']).pack(pady=(8, 0))
         
         map_outer = tk.Frame(main, bg=self.colors['accent_cyan'], padx=2, pady=2)
         map_outer.pack(fill=tk.X, pady=(20, 15))
