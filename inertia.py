@@ -1,5 +1,3 @@
-# COMMIT 1.2 - SUKANTH
-# Added: GridRegion class for spatial decomposition
 
 import tkinter as tk
 from tkinter import messagebox
@@ -31,11 +29,10 @@ MAPS = {
     }
 }
 
-# ========== SUKANTH 1.1: GRAPH STRUCTURE (from previous) ==========
+# ========== SUKANTH 1.1: GRAPH STRUCTURE ==========
 
 class GraphBuilder:
-    """SUKANTH 1.1: Adjacency list graph construction"""
-    
+    """SUKANTH 1.1"""
     def __init__(self, board, rows, cols):
         self.board = board
         self.rows = rows
@@ -44,43 +41,26 @@ class GraphBuilder:
         self.cell_types = {}
     
     def build_adjacency_list(self):
-        """Build adjacency list for grid"""
-        print(f"[SUKANTH-1.1] Building graph for {self.rows}x{self.cols} grid")
-        
         for r in range(self.rows):
             for c in range(self.cols):
                 pos = (r, c)
                 self.cell_types[pos] = self.board[r][c]
-                
                 if self.board[r][c] == MINE:
                     continue
-                
                 neighbors = []
                 for dr, dc in ALL_DIRECTIONS:
                     nr, nc = r + dr, c + dc
                     if (0 <= nr < self.rows and 0 <= nc < self.cols and 
                         self.board[nr][nc] != MINE):
                         neighbors.append((nr, nc))
-                
                 self.graph[pos] = neighbors
-        
-        print(f"[SUKANTH-1.1] Graph built: {len(self.graph)} nodes")
         return self.graph, self.cell_types
 
 
 # ========== SUKANTH 1.2: GRID REGION STRUCTURE ==========
 
 class GridRegion:
-    """
-    SUKANTH 1.2: Represents a rectangular region of the grid.
-    This is the fundamental unit for divide-and-conquer spatial decomposition.
-    
-    Stores:
-    - Boundary coordinates (row_start, row_end, col_start, col_end)
-    - Gems within this region
-    - Size information
-    """
-    
+    """SUKANTH 1.2"""
     def __init__(self, board, row_start, row_end, col_start, col_end, all_gems):
         self.board = board
         self.row_start = row_start
@@ -89,18 +69,9 @@ class GridRegion:
         self.col_end = col_end
         self.rows = row_end - row_start
         self.cols = col_end - col_start
-        
-        # SUKANTH 1.2: Extract gems that fall within this region
         self.gems = self._extract_gems(all_gems)
-        
-        print(f"[SUKANTH-1.2] Region created: [{row_start}:{row_end}, {col_start}:{col_end}] "
-              f"size={self.rows}x{self.cols}, gems={len(self.gems)}")
     
     def _extract_gems(self, all_gems):
-        """
-        SUKANTH 1.2: Filter gems that belong to this region.
-        Critical for divide-and-conquer: each subproblem only sees its gems.
-        """
         region_gems = set()
         for r, c in all_gems:
             if self.row_start <= r < self.row_end and self.col_start <= c < self.col_end:
@@ -108,17 +79,110 @@ class GridRegion:
         return region_gems
     
     def size(self):
-        """SUKANTH 1.2: Total cells in region"""
         return self.rows * self.cols
     
     def contains(self, pos):
-        """SUKANTH 1.2: Check if position is inside region"""
         r, c = pos
         return (self.row_start <= r < self.row_end and 
                 self.col_start <= c < self.col_end)
+
+
+# ========== SUKANTH 1.3: RECURSIVE BISECTION (DIVIDE) ==========
+
+class DivideConquerSplitter:
+    """
+    SUKANTH 1.3: Implements the DIVIDE step of Divide & Conquer.
+    Recursively splits grid into smaller regions until base case.
+    """
     
-    def __repr__(self):
-        return f"GridRegion({self.rows}x{self.cols}, {len(self.gems)} gems)"
+    def __init__(self, board, rows, cols, split_threshold=25):
+        self.board = board
+        self.rows = rows
+        self.cols = cols
+        self.split_threshold = split_threshold
+    
+    def recursive_split(self, region, depth=0):
+        """
+        SUKANTH 1.3: Core DIVIDE algorithm.
+        
+        Recursively splits region into two halves:
+        - Alternates between vertical and horizontal splits
+        - Continues until region size <= threshold (base case)
+        - Returns list of all leaf regions
+        """
+        print(f"[SUKANTH-1.3-DIVIDE] Depth {depth}: Region {region.rows}x{region.cols}, {len(region.gems)} gems")
+        
+        # BASE CASE: Region small enough
+        if region.size() <= self.split_threshold:
+            print(f"[SUKANTH-1.3-BASE] Reached base case at depth {depth}")
+            return [region]
+        
+        # RECURSIVE CASE: Split region
+        left_region, right_region = self._bisect_region(region, depth)
+        
+        # Recursively split left half
+        left_results = self.recursive_split(left_region, depth + 1)
+        
+        # Recursively split right half
+        right_results = self.recursive_split(right_region, depth + 1)
+        
+        # Combine results
+        return left_results + right_results
+    
+    def _bisect_region(self, region, depth):
+        """
+        SUKANTH 1.3: Split a region into two halves.
+        
+        Alternates split direction:
+        - Even depth: vertical split (divide columns)
+        - Odd depth: horizontal split (divide rows)
+        
+        This creates a balanced binary tree of regions.
+        """
+        # Alternate split direction
+        split_vertically = (depth % 2 == 0)
+        
+        if split_vertically:
+            # Split along vertical line
+            mid_col = region.col_start + region.cols // 2
+            
+            left_region = GridRegion(
+                self.board,
+                region.row_start, region.row_end,
+                region.col_start, mid_col,
+                region.gems
+            )
+            
+            right_region = GridRegion(
+                self.board,
+                region.row_start, region.row_end,
+                mid_col, region.col_end,
+                region.gems
+            )
+            
+            print(f"[SUKANTH-1.3-SPLIT] Vertical split at col {mid_col}")
+            
+        else:
+            # Split along horizontal line
+            mid_row = region.row_start + region.rows // 2
+            
+            left_region = GridRegion(
+                self.board,
+                region.row_start, mid_row,
+                region.col_start, region.col_end,
+                region.gems
+            )
+            
+            right_region = GridRegion(
+                self.board,
+                mid_row, region.row_end,
+                region.col_start, region.col_end,
+                region.gems
+            )
+            
+            print(f"[SUKANTH-1.3-SPLIT] Horizontal split at row {mid_row}")
+        
+        return left_region, right_region
 
 
 class InertiaGame:
@@ -127,7 +191,9 @@ class InertiaGame:
         self.graph_builder = None
         self.graph = {}
         self.cell_types = {}
-        self.root_region = None  # NEW: Will hold the full grid region
+        self.root_region = None
+        self.dc_splitter = None  # NEW
+        self.leaf_regions = []    # NEW: Will hold all base-case regions
         self.reset()
     
     def reset(self):
@@ -150,9 +216,15 @@ class InertiaGame:
         self.graph_builder = GraphBuilder(self.board, self.rows, self.cols)
         self.graph, self.cell_types = self.graph_builder.build_adjacency_list()
         
-        # SUKANTH 1.2: Create root region (entire grid)
+        # SUKANTH 1.2: Create root region
         all_gems = set(map_data["gems"])
         self.root_region = GridRegion(self.board, 0, self.rows, 0, self.cols, all_gems)
+        
+        # SUKANTH 1.3: Recursively split grid (DIVIDE step)
+        self.dc_splitter = DivideConquerSplitter(self.board, self.rows, self.cols)
+        self.leaf_regions = self.dc_splitter.recursive_split(self.root_region, depth=0)
+        
+        print(f"[SUKANTH-1.3-RESULT] Grid split into {len(self.leaf_regions)} base regions")
     
     def simulate_move(self, direction):
         dr, dc = direction
@@ -233,7 +305,7 @@ class InertiaGame:
 class InertiaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("INERTIA [C1.2: Sukanth-GridRegion]")
+        self.root.title("INERTIA [C1.3: Sukanth-Bisection]")
         
         self.colors = {
             'bg_darkest': '#0d0221', 'bg_dark': '#1a0b2e', 'bg_medium': '#2d1b4e',
@@ -269,7 +341,7 @@ class InertiaGUI:
         tk.Label(title_inner, text="⬢  I N E R T I A  ⬢", font=("Helvetica", 42, "bold"),
                 fg=self.colors['accent_cyan'], bg=self.colors['bg_dark']).pack()
         
-        tk.Label(title_inner, text="C1.2: SUKANTH - Grid Region Structure",
+        tk.Label(title_inner, text="C1.3: SUKANTH - Recursive Bisection (DIVIDE)",
                 font=("Courier", 11, "bold"), fg=self.colors['accent_purple'], bg=self.colors['bg_dark']).pack(pady=(8, 0))
         
         map_outer = tk.Frame(main, bg=self.colors['accent_cyan'], padx=2, pady=2)
