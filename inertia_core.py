@@ -1,13 +1,3 @@
-"""
-INERTIA - Core Game Logic  (PURE D&C + PURE DP)
-================================================
-AI Algorithms:
-  Greedy          — immediate best move
-  Divide & Conquer— TRUE D&C: splits gem set recursively into subproblems,
-                    solves each independently, combines best first-move
-  Dynamic Prog.   — TRUE DP: state=(pos, frozenset remaining gems),
-                    memoized across the ENTIRE turn, not wiped per call
-"""
 
 # ==================== CONSTANTS ====================
 
@@ -212,29 +202,6 @@ class GreedyAI:
 
         return best_dir, best_path
 
-
-# ==================== DIVIDE & CONQUER AI ====================
-#
-# TRUE D&C STRUCTURE
-# ==================
-# Problem  : "What is the best first move to maximise gems collected
-#             from the current position given gem set G?"
-#
-# Divide   : Split G into two spatial halves (G_left, G_right) by
-#             median row or column variance — same axis-split as before.
-#
-# Conquer  : For EACH half, independently find:
-#               best_move(pos, G_half)   ← recursive call
-#             This recurses until G_half is a singleton or empty,
-#             where the base case returns the direct slide score.
-#
-# Combine  : From both halves' recommended first moves, pick the one
-#             that yields the higher immediate gem count from `pos`.
-#             (The combination step merges two independent sub-solutions.)
-#
-# This is genuine D&C: the gem set is the "input array" being split,
-# each half is solved independently, and the results are combined.
-
 class DivideConquerAI:
     """
     Pure Divide & Conquer AI.
@@ -275,7 +242,6 @@ class DivideConquerAI:
         """
 
         # ---- BASE CASE: 0 or 1 gem ----
-        # "Conquer" the trivially small subproblem directly.
         if len(gem_set) == 0:
             return 0, None, []
 
@@ -291,8 +257,6 @@ class DivideConquerAI:
         right_score, right_dir, right_path = self._dnc(board, pos, right_gems)
 
         # ---- COMBINE ----
-        # Pick the half whose recommended first move yields a higher score.
-        # Tie-break: prefer the half with more gems (richer sub-cluster).
         if left_score >= right_score:
             return left_score, left_dir, left_path
         else:
@@ -312,7 +276,6 @@ class DivideConquerAI:
             end, gems_hit, hit_mine, path = simulate_slide(board, pos, d)
             if hit_mine or end == pos:
                 continue
-            # Count how many gems from gem_set we actually collect
             collected = len(gems_hit & gem_set)
             if collected > best_score:
                 best_score = collected
@@ -342,38 +305,9 @@ class DivideConquerAI:
             left  = frozenset(g for g in lst if g[1] <= med)
             right = frozenset(g for g in lst if g[1] >  med)
 
-        # Guard: if split produced an empty half, push everything to left
         if not right:
             return gem_set, frozenset()
         return left, right
-
-
-# ==================== DYNAMIC PROGRAMMING AI ====================
-#
-# TRUE DP STRUCTURE
-# =================
-# State         : (ball_position, frozenset_of_remaining_gems)
-#                 — fully captures everything needed to decide optimally.
-#
-# Subproblem    : dp[state] = maximum number of gems collectable
-#                             from this state onwards (no depth cap).
-#
-# Recurrence    : dp[(pos, R)] = max over all valid moves d of
-#                     |gems_collected(d)| + dp[(new_pos, R - collected)]
-#
-# Base case     : dp[(pos, frozenset())] = 0   (no gems left)
-#
-# Overlapping   : The same (pos, R) can be reached via different move
-# subproblems     sequences — memoization ensures it is computed once.
-#
-# Optimal sub-  : The best play from state S is built from the best play
-# structure       from each next state — verified by Bellman principle.
-#
-# Memo lifetime : The table is built ONCE per call to choose_move and
-#                 persists for the entire recursive expansion.  It is NOT
-#                 cleared between recursive calls (unlike the old code).
-#                 It IS cleared between turns because the real board
-#                 changes (gems removed) so states are different anyway.
 
 class DPAI:
     """
@@ -381,10 +315,6 @@ class DPAI:
 
     Solves dp[(pos, remaining_gems)] = max gems collectable from here,
     with full memoization and NO arbitrary depth limit.
-
-    To keep it tractable the state space is bounded by capping the
-    number of remaining gems considered at MAX_GEMS_FOR_DP.  For larger
-    gem counts it falls back to the top-k most reachable gems.
     """
 
     name        = "Dynamic Programming"
@@ -393,20 +323,17 @@ class DPAI:
         "no depth cap, overlapping subproblems reused."
     )
 
-    MAX_GEMS_FOR_DP = 12   # beyond this the state space explodes
+    MAX_GEMS_FOR_DP = 12
 
     def __init__(self):
-        # memo persists across recursive calls within one choose_move()
         self._memo = {}
 
     def choose_move(self, board, ball_pos):
         remaining = board.remaining_gems()
 
-        # If gem count is large, restrict to reachable gems only
         if len(remaining) > self.MAX_GEMS_FOR_DP:
-            remaining = self._reachable_gems(board, ball_pos, remaining)
+            remaining = self._reachable_gems(ball_pos, remaining)
 
-        # Clear memo for this turn (board has changed since last turn)
         self._memo = {}
 
         best_score = -1
@@ -421,7 +348,6 @@ class DPAI:
             collected     = gems_hit & remaining
             new_remaining = remaining - collected
 
-            # Solve the subproblem from the next state
             future = self._dp(board, end, new_remaining)
             total  = len(collected) + future
 
@@ -434,30 +360,19 @@ class DPAI:
             return GreedyAI().choose_move(board, ball_pos)
         return best_dir, best_path
 
-    # ------------------------------------------------------------------
-    # DP recurrence
-    # ------------------------------------------------------------------
-
     def _dp(self, board, pos, remaining):
         """
-        Returns the maximum number of gems collectable from
-        state (pos, remaining) — memoized.
-
-        This is the pure DP recurrence:
-            dp[(pos, R)] = 0                           if R is empty
-            dp[(pos, R)] = max_d( |collect(d)| + dp[(end_d, R-collect(d))] )
+        dp[(pos, R)] = 0                              if R is empty
+        dp[(pos, R)] = max_d( |collect(d)| + dp[(end_d, R - collect(d))] )
         """
-        # ---- Base case ----
         if not remaining:
             return 0
 
         state = (pos, remaining)
 
-        # ---- Memoization check (overlapping subproblems) ----
         if state in self._memo:
             return self._memo[state]
 
-        # ---- Recurrence ----
         best = 0
         for d in ALL_DIRECTIONS:
             end, gems_hit, hit_mine, _ = simulate_slide(board, pos, d)
@@ -467,29 +382,20 @@ class DPAI:
             collected     = gems_hit & remaining
             new_remaining = remaining - collected
 
-            # Recursive call — will be memoized on return
             future = self._dp(board, end, new_remaining)
             total  = len(collected) + future
 
             if total > best:
                 best = total
 
-        # ---- Store result ----
         self._memo[state] = best
         return best
 
-    # ------------------------------------------------------------------
-    # Helper: limit state space for large boards
-    # ------------------------------------------------------------------
-
-    def _reachable_gems(self, board, pos, all_gems):
-        """
-        BFS-style reachability: return the closest MAX_GEMS_FOR_DP gems
-        by Manhattan distance from `pos`.  This keeps the DP tractable
-        without sacrificing local optimality.
-        """
-        ranked = sorted(all_gems,
-                        key=lambda g: abs(g[0] - pos[0]) + abs(g[1] - pos[1]))
+    def _reachable_gems(self, pos, all_gems):
+        ranked = sorted(
+            all_gems,
+            key=lambda g: abs(g[0] - pos[0]) + abs(g[1] - pos[1])
+        )
         return frozenset(ranked[:self.MAX_GEMS_FOR_DP])
 
     def memo_stats(self):
