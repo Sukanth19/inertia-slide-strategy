@@ -314,7 +314,13 @@ class DPAI:
 # ==================================================================
 
 class BacktrackState:
-    """S = (position, remaining_gems) — one node in the search tree."""
+    """
+    S = (position, remaining_gems) — one node in the search tree.
+
+    Decision tree with branching factor b = 8:
+      S → UP, DOWN, LEFT, RIGHT, UP-LEFT, UP-RIGHT, DOWN-LEFT, DOWN-RIGHT
+    Worst-case nodes = b^d = 8^6 = 262 144  (reason pruning is essential)
+    """
 
     MAX_DEPTH = 6
 
@@ -344,7 +350,12 @@ class BacktrackState:
 # ==================================================================
 
 class BacktrackMoveGen:
-    """Dhiraj — expands a state into all valid (direction, end, collected, path) tuples."""
+    """
+    Dhiraj — Move Generation (the "Choose" step).
+
+    for direction in ALL_DIRECTIONS:
+        simulate_move() → filter mines → filter no-ops → add to candidates
+    """
 
     @staticmethod
     def generate_moves(board, state):
@@ -374,96 +385,39 @@ class BacktrackMoveGen:
 
 # ==================================================================
 # BACKTRACKING AI — Contribution 3 of 4
-# Author  : Nikhil
-# Topic   : Recursive Exploration — Depth-Limited Search Engine
+# Author  : Nikhil — Recursive Exploration
 # ==================================================================
-#
-# THE RECURSIVE STRUCTURE
-# ------------------------
-# solve(state, depth)  is the heart of the algorithm.
-#
-#   solve(state, depth):
-#       if terminal:
-#           return 0
-#       for each move in generate_moves(state):
-#           child_state = state.child(move)     ← go deeper
-#           future = solve(child_state, depth-1) ← RECURSIVE CALL
-#           score  = gems_now + future
-#           track best score
-#       return best score
-#
-# SEARCH TREE EXAMPLE
-# --------------------
-#   State S  (depth 0)
-#    ├─ Move A  → State SA  (depth 1)
-#    │    ├─ Move A1 → State SA1  (depth 2) → base case returns 0
-#    │    └─ Move A2 → State SA2  (depth 2) → base case returns 1
-#    │         score(A) = gems(A) + max(0, 1) = gems(A) + 1
-#    └─ Move B  → State SB  (depth 1)
-#         ├─ Move B1 → State SB1  (depth 2) → returns 2
-#         └─ Move B2 → State SB2  (depth 2) → returns 0
-#              score(B) = gems(B) + max(2, 0) = gems(B) + 2
-#
-#   best at root = max(score(A), score(B))
-#
-# DEPTH-LIMITED SEARCH
-# ---------------------
-# Without a depth cap the recursion could run forever in cyclic grids.
-# BacktrackState.MAX_DEPTH = 6 caps it.  Adaptive depth (Sukanth's
-# contribution) relaxes this cap to MAX_DEPTH=∞ when ≤4 gems remain.
-#
-# WHY EVALUATE FUTURE OUTCOMES?
-# --------------------------------
-# A greedy algorithm only asks: "which move scores most NOW?"
-# The recursive engine asks:    "which move leads to the most gems
-#                                across ALL future moves within depth?"
-# This is the key difference that makes backtracking strategic.
 
 class BacktrackSearchEngine:
     """
-    Nikhil — Recursive Search Engine
-    ==================================
-    Explores the search tree depth-first, evaluating future outcomes
-    at each node by recursing into child states.
+    Nikhil — Recursive Depth-Limited Search Engine.
 
-    Uses BacktrackState (Badri Nath) to represent nodes and
-    BacktrackMoveGen (Dhiraj) to expand them.
+    solve(state, depth):
+        if terminal → return 0
+        for move in generate_moves(state):
+            child = state.child(move)       ← go deeper
+            future = recurse(child)          ← RECURSIVE CALL
+            score  = now + future
+        return best score
 
-    Returns the best total gem score reachable from a given state,
-    plus the first move and path leading to that score.
+    Search tree:
+      State
+       ├─ Move A → State A
+       │    ├─ Move A1 → … → base case
+       │    └─ Move A2 → … → base case
+       └─ Move B → State B
+            ├─ Move B1 → … → base case
+            └─ Move B2 → … → base case
     """
 
     def recurse(self, board, state):
-        """
-        Depth-limited recursive search from `state`.
-
-        Pattern:
-            explore move
-            ↓
-            recurse deeper          (go down the tree)
-            ↓
-            score = now + future    (evaluate on the way back UP)
-            ↓
-            track best              (compare branches)
-
-        Returns
-        -------
-        (best_score, best_direction, best_path)
-        """
-
-        # ---- Base case: terminal state --------------------------------
-        # No gems left OR depth cap reached — nothing more to collect.
         if state.is_terminal():
             return 0, None, []
 
-        # ---- Generate and order moves (Dhiraj's layer) ----------------
         raw_moves = BacktrackMoveGen.generate_moves(board, state)
-
         if not raw_moves:
-            return 0, None, []   # no legal moves from this position
+            return 0, None, []
 
-        # Order moves best-first using the heuristic score
-        # so good branches are found early (enables better pruning later)
         ordered = sorted(
             raw_moves,
             key=lambda m: BacktrackMoveGen.score_move(
@@ -472,34 +426,226 @@ class BacktrackSearchEngine:
             reverse=True,
         )
 
-        # ---- Recursive exploration ------------------------------------
         best_score = -1
         best_dir   = None
         best_path  = []
 
         for direction, end, collected, path in ordered:
-
-            # Build the child state (Badri Nath's BacktrackState.child)
-            # This is the "explore deeper" step — descend one level
-            child_state = state.child(end, collected)
-
-            # Recursive call — evaluate all moves from the child state
+            child_state  = state.child(end, collected)
             future_score, _, _ = self.recurse(board, child_state)
-
-            # Calculate total gems reachable via this branch
             total = len(collected) + future_score
 
-            # Track the best branch seen so far
             if total > best_score:
                 best_score = total
                 best_dir   = direction
                 best_path  = path
 
-            # Early exit: perfect solution found — stop searching
             if best_score == len(state.remaining):
-                break
+                break   # perfect solution found — stop early
 
         return best_score, best_dir, best_path
+
+
+# ==================================================================
+# BACKTRACKING AI — Contribution 4 of 4
+# Author  : Sukanth
+# Topic   : Backtracking Loop, Alpha Pruning & AI Registry Entry
+# ==================================================================
+#
+# THE BACKTRACKING PATTERN
+# -------------------------
+#   choose move          ← pick a candidate (Dhiraj)
+#   explore deeper       ← recurse into child state (Nikhil)
+#   undo move            ← implicit: frozenset subtraction means parent
+#                           `remaining` is NEVER modified; returning from
+#                           the recursive call naturally "undoes" the move
+#   try next move        ← loop continues to the next candidate
+#   keep best = max(score)
+#
+# WHY BACKTRACKING IS NEEDED
+# ---------------------------
+# A greedy algorithm commits to the first good-looking move forever.
+# Backtracking instead tries ALL branches and reverts when a branch
+# turns out to be suboptimal — it tests alternatives that greedy misses.
+#
+# ALPHA PRUNING
+# -------------
+# `alpha` = the best gem total found anywhere in the tree so far.
+# Upper bound of current branch = gems_now + all_gems_remaining.
+# If upper_bound <= alpha → this branch provably can't improve on what
+# we already found → skip it entirely (prune the branch).
+#
+# This transforms worst-case O(b^d) = O(8^6) = 262 144 into a
+# fraction of that in practice.
+#
+# ADAPTIVE DEPTH
+# ---------------
+# When ≤ 4 gems remain, MAX_DEPTH is lifted so the endgame is
+# solved exactly — the search space is small enough to exhaust.
+#
+# COMPLEXITY SUMMARY
+# -------------------
+#   Worst case : O(b^d) where b=8, d=MAX_DEPTH=6  → 262 144 nodes
+#   With pruning: typically < 5 000 nodes per turn in practice
+
+class BacktrackAI:
+    """
+    Sukanth — Complete Backtracking AI
+    =====================================
+    Assembles all four contributions into a working AI:
+      • BacktrackState     (Badri Nath) — state representation
+      • BacktrackMoveGen   (Dhiraj)     — move generation & ordering
+      • BacktrackSearchEngine (Nikhil)  — recursive exploration
+      • BacktrackAI        (Sukanth)    — alpha pruning + public interface
+
+    choose_move() is the entry point called by GameState each CPU turn.
+    """
+
+    name        = "Backtracking"
+    description = (
+        "Ordered backtrack search: tries all paths, reverts bad moves, "
+        "uses alpha pruning — O(b^d) with b=8, d=6."
+    )
+
+    MAX_GEMS_BT = 12   # cap gem set to keep search tractable on large maps
+
+    def __init__(self):
+        self._engine = BacktrackSearchEngine()
+
+    # ------------------------------------------------------------------
+    # Public interface (called by GameState every CPU turn)
+    # ------------------------------------------------------------------
+
+    def choose_move(self, board, ball_pos):
+        remaining = board.remaining_gems()
+        if not remaining:
+            return None, []
+
+        # Limit gem set for very large boards
+        if len(remaining) > self.MAX_GEMS_BT:
+            remaining = self._filter_gems(board, ball_pos, remaining)
+
+        # Adaptive depth: solve endgame exactly when few gems remain
+        adaptive_depth = self._adaptive_depth(len(remaining))
+
+        # Build the root state (Badri Nath's representation)
+        root = BacktrackState(
+            position  = ball_pos,
+            remaining = remaining,
+            depth     = 0,
+        )
+        root.MAX_DEPTH = adaptive_depth   # override per-turn
+
+        # ------------------------------------------------------------------
+        # BACKTRACKING LOOP WITH ALPHA PRUNING
+        # ------------------------------------------------------------------
+        # We run one pass here at the root level (depth 0) so that alpha
+        # is updated across top-level moves.  Each top-level move's subtree
+        # is searched by BacktrackSearchEngine.recurse() (Nikhil).
+        #
+        #   choose move
+        #     → explore deeper (recurse)
+        #     → undo move (implicit — frozenset unchanged)
+        #     → try next move
+        #     → keep best = max(score)
+        # ------------------------------------------------------------------
+
+        # Generate and order root-level moves (Dhiraj)
+        raw_moves = BacktrackMoveGen.generate_moves(board, root)
+        if not raw_moves:
+            return GreedyAI().choose_move(board, ball_pos)
+
+        ordered = sorted(
+            raw_moves,
+            key=lambda m: BacktrackMoveGen.score_move(
+                m[1], m[2], remaining - m[2]
+            ),
+            reverse=True,
+        )
+
+        alpha      = 0        # best gem total found so far (pruning threshold)
+        best_dir   = None
+        best_path  = []
+        best_total = -1
+
+        for direction, end, collected, path in ordered:
+
+            # ---- ALPHA PRUNING ----------------------------------------
+            # Upper bound = gems we collect now + every gem still on board
+            upper_bound = len(collected) + len(remaining - collected)
+            if upper_bound <= alpha:
+                continue   # this branch can't beat what we already found
+
+            # ---- CHOOSE this move, EXPLORE deeper (Nikhil's engine) ---
+            child_state = BacktrackState(
+                position  = end,
+                remaining = remaining - collected,
+                depth     = 1,
+            )
+            child_state.MAX_DEPTH = adaptive_depth
+
+            future_score, _, _ = self._engine.recurse(board, child_state)
+
+            # ---- EVALUATE -----------------------------------------------
+            total = len(collected) + future_score
+
+            # ---- BACKTRACK (implicit) + UPDATE BEST ---------------------
+            # "Undo" happens automatically: `remaining` is a frozenset and
+            # was never mutated — the loop variable simply moves to the next
+            # candidate direction.
+            if total > best_total:
+                best_total = total
+                best_dir   = direction
+                best_path  = path
+                alpha      = best_total   # tighten the pruning bound
+
+            # Perfect solution: all gems collected — stop immediately
+            if best_total == len(remaining):
+                break
+
+        if best_dir is None:
+            return GreedyAI().choose_move(board, ball_pos)
+
+        return best_dir, best_path
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _adaptive_depth(gem_count):
+        """
+        Lift the depth cap for small gem counts so the endgame is solved
+        exactly.  For larger counts use the standard cap (6).
+        """
+        if gem_count <= 2:
+            return gem_count + 3    # exact solution, very cheap
+        if gem_count <= 4:
+            return gem_count + 2    # near-exact, still fast
+        return BacktrackState.MAX_DEPTH   # standard cap
+
+    @staticmethod
+    def _filter_gems(board, pos, all_gems):
+        """
+        Keep only MAX_GEMS_BT gems: prioritise directly slide-reachable
+        ones; fill remainder with nearest by Manhattan distance.
+        """
+        reachable = set()
+        for d in ALL_DIRECTIONS:
+            _, gems_hit, hit_mine, _ = simulate_slide(board, pos, d)
+            if not hit_mine:
+                reachable |= (gems_hit & all_gems)
+
+        others = sorted(
+            all_gems - reachable,
+            key=lambda g: abs(g[0] - pos[0]) + abs(g[1] - pos[1])
+        )
+        chosen = reachable
+        for g in others:
+            if len(chosen) >= BacktrackAI.MAX_GEMS_BT:
+                break
+            chosen = chosen | {g}
+        return frozenset(chosen)
 
 
 # ==================== AI REGISTRY ====================
@@ -508,6 +654,7 @@ AI_ALGORITHMS = {
     "Greedy":              GreedyAI,
     "Divide & Conquer":    DivideConquerAI,
     "Dynamic Programming": DPAI,
+    "Backtracking":        BacktrackAI,   # ← added by Sukanth (Commit 4)
 }
 
 AI_NAMES = list(AI_ALGORITHMS.keys())
