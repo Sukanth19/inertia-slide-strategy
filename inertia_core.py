@@ -136,19 +136,13 @@ class Board:
 # ==================== PHYSICS ====================
 
 def simulate_slide(board, start, direction, already_collected=None):
-    """
-    Slide from `start` in `direction` on the REAL board.
-    Returns: end_pos, gems_hit (frozenset), hit_mine (bool), path (list)
-    """
     if already_collected is None:
         already_collected = frozenset()
-
     dr, dc   = direction
     r, c     = start
     path     = [(r, c)]
     gems     = set()
     hit_mine = False
-
     while True:
         nr, nc = r + dr, c + dc
         if not board.in_bounds(nr, nc):
@@ -164,7 +158,6 @@ def simulate_slide(board, start, direction, already_collected=None):
             break
         elif cell == STOP:
             break
-
     return (r, c), frozenset(gems), hit_mine, path
 
 
@@ -323,106 +316,41 @@ class DPAI:
 # Author  : Badri Nath
 # Topic   : Problem Representation — State Space & Decision Tree
 # ==================================================================
-#
-# WHAT IS A STATE?
-# ----------------
-# Each node in the backtracking search tree is uniquely identified by:
-#
-#   S = (position, remaining_gems)
-#
-#   • position       : (row, col) tuple — where the ball currently sits
-#   • remaining_gems : frozenset of gem coordinates still on the board
-#
-# Together these two values fully describe everything the algorithm
-# needs to make a decision.  Nothing else matters — move history,
-# path taken, turn number — none of it.
-#
-# DECISION TREE STRUCTURE
-# -----------------------
-# From every state S the ball can attempt up to 8 slides:
-#
-#   S = (pos, gems)
-#    ├─ UP        → new state S1
-#    ├─ DOWN      → new state S2
-#    ├─ LEFT      → new state S3
-#    ├─ RIGHT     → new state S4
-#    ├─ UP-LEFT   → new state S5
-#    ├─ UP-RIGHT  → new state S6
-#    ├─ DOWN-LEFT → new state S7
-#    └─ DOWN-RIGHT→ new state S8
-#
-# Each child state has its own 8 children, and so on.
-#
-# BRANCHING FACTOR & EXPONENTIAL GROWTH
-# --------------------------------------
-# Branching factor  b = 8  (8 directions)
-# Search depth      d = MAX_DEPTH
-#
-# Worst-case nodes  = b^d = 8^d
-#
-#   depth 1 →        8 nodes
-#   depth 3 →      512 nodes
-#   depth 5 →   32 768 nodes
-#   depth 6 →  262 144 nodes
-#
-# This is WHY backtracking + pruning is essential — without it the
-# naive tree grows too large to evaluate in real time.
-#
-# BacktrackState encapsulates the state definition cleanly so that
-# the rest of the algorithm (Dhiraj, Nikhil, Sukanth) can reference
-# a single well-defined object instead of loose tuples.
 
 class BacktrackState:
     """
     Badri Nath — State Space Representation
     ========================================
-    Represents one node in the backtracking search tree.
+    One node in the backtracking search tree.
+      S = (position, remaining_gems)
 
-    Attributes
-    ----------
-    position  : (row, col) — current ball position
-    remaining : frozenset  — gem coordinates still uncollected
-    depth     : int        — how deep this node sits in the tree
-                             (0 = root / starting state)
+    Decision tree (branching factor b = 8):
+      S
+       ├─ UP         → S1
+       ├─ DOWN       → S2
+       ├─ LEFT       → S3
+       ├─ RIGHT      → S4
+       ├─ UP-LEFT    → S5
+       ├─ UP-RIGHT   → S6
+       ├─ DOWN-LEFT  → S7
+       └─ DOWN-RIGHT → S8
 
-    This is the canonical state definition S = (position, remaining_gems).
-    Because `remaining` is a frozenset (immutable), child states are
-    created by subtraction without modifying the parent — the call stack
-    itself acts as the undo mechanism during backtracking.
+    Worst-case nodes = b^d = 8^d (exponential growth).
     """
 
-    # Maximum look-ahead depth for the search tree
     MAX_DEPTH = 6
 
     def __init__(self, position, remaining, depth=0):
-        self.position  = position   # (row, col)
-        self.remaining = remaining  # frozenset of gem coords
-        self.depth     = depth      # tree depth (0 = root)
-
-    # ------------------------------------------------------------------
-    # State properties used by the rest of the algorithm
-    # ------------------------------------------------------------------
+        self.position  = position
+        self.remaining = remaining  # frozenset — immutable, enables implicit backtrack
+        self.depth     = depth
 
     def is_terminal(self):
-        """
-        A state is terminal when:
-          (a) no gems remain to collect, OR
-          (b) we have reached the maximum search depth
-        In both cases further recursion is pointless.
-        """
+        """No gems left OR depth cap reached."""
         return (not self.remaining) or (self.depth >= self.MAX_DEPTH)
 
     def child(self, new_position, gems_collected):
-        """
-        Create a child state after making one move.
-        The parent's `remaining` is unchanged (frozenset subtraction
-        returns a NEW frozenset) — this is the implicit backtrack step.
-
-        Parameters
-        ----------
-        new_position    : (row, col) where the ball stops
-        gems_collected  : frozenset of gems picked up on this slide
-        """
+        """Return a NEW child state (parent is unchanged — backtrack is free)."""
         return BacktrackState(
             position  = new_position,
             remaining = self.remaining - gems_collected,
@@ -434,9 +362,118 @@ class BacktrackState:
                 f"gems_left={len(self.remaining)}, depth={self.depth})")
 
 
+# ==================================================================
+# BACKTRACKING AI — Contribution 2 of 4
+# Author  : Dhiraj
+# Topic   : Move Generation — the "Choose" Step
+# ==================================================================
+#
+# HOW MOVES ARE GENERATED
+# -------------------------
+# From any state S the algorithm iterates over ALL_DIRECTIONS and
+# calls simulate_slide() for each.  This is the "expand" step in the
+# search tree — it produces the children of the current node.
+#
+# for direction in ALL_DIRECTIONS:        ← try all 8 directions
+#     end, gems_hit, hit_mine, path =
+#         simulate_slide(board, pos, direction)
+#
+# SLIDING MOVEMENT (inertia rule)
+# --------------------------------
+# The ball does NOT move one cell — it slides until it hits:
+#   • a wall (edge of grid)       → stops before going out of bounds
+#   • a STOP cell                 → stops ON the stop cell
+#   • a MINE cell                 → eliminated (invalid move)
+# Gems along the path are collected automatically.
+#
+# PATH GENERATION
+# ---------------
+# simulate_slide returns the full path list [(r0,c0), (r1,c1), …].
+# The path is used both for scoring (how many gems?) and for the
+# GUI animation.
+#
+# INVALID MOVE DETECTION (pruning mines early)
+# ---------------------------------------------
+# A move is discarded immediately if:
+#   hit_mine == True  → would kill the ball
+#   end == pos        → ball did not move (wall directly adjacent)
+#
+# This is the first layer of pruning — done BEFORE any recursion.
+
+class BacktrackMoveGen:
+    """
+    Dhiraj — Move Generation
+    =========================
+    Generates and filters valid candidate moves from a given state.
+    Provides the raw (direction, end, collected, path) tuples that
+    the recursive engine (Nikhil) and backtracking loop (Sukanth) consume.
+    """
+
+    @staticmethod
+    def generate_moves(board, state):
+        """
+        Expand the current state into all valid child moves.
+
+        Returns a list of tuples:
+            (direction, end_position, gems_collected, slide_path)
+
+        Moves that hit a mine or leave the ball stationary are
+        silently discarded — they are never added to the list.
+
+        Parameters
+        ----------
+        board : Board  — the live game board
+        state : BacktrackState — the node being expanded
+        """
+        moves = []
+
+        # ---- Decision expansion step ---------------------------------
+        # Try every direction: this is the branching factor b = 8.
+        for direction in ALL_DIRECTIONS:
+
+            end, gems_hit, hit_mine, path = simulate_slide(
+                board, state.position, direction
+            )
+
+            # ---- Prune mines and no-op moves immediately -------------
+            if hit_mine:
+                continue          # mine → illegal, discard
+            if end == state.position:
+                continue          # wall directly adjacent → no movement
+
+            # Only count gems that are still on the board
+            collected = gems_hit & state.remaining
+
+            moves.append((direction, end, collected, path))
+
+        return moves
+
+    @staticmethod
+    def score_move(end_pos, collected, remaining_after):
+        """
+        Quick heuristic score for move ordering.
+        Tries best moves first so the recursive engine finds good
+        solutions early, allowing alpha pruning to cut more branches.
+
+        Score = (gems collected now) * 10
+              + (gems within 3-step Manhattan reach from landing) * 3
+              - (min distance to nearest remaining gem) * 1
+        """
+        immediate = len(collected) * 10
+
+        # Proximity bonus: reward landing near leftover gems
+        if remaining_after:
+            min_dist = min(
+                abs(end_pos[0] - g[0]) + abs(end_pos[1] - g[1])
+                for g in remaining_after
+            )
+        else:
+            min_dist = 0
+
+        return immediate - min_dist
+
+
 # ==================== AI REGISTRY ====================
-# BacktrackAI will be added by Sukanth (Commit 4).
-# Placeholder keeps the registry valid after each commit.
 
 AI_ALGORITHMS = {
     "Greedy":              GreedyAI,
