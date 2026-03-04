@@ -1,4 +1,3 @@
-
 # ==================== CONSTANTS ====================
 
 EMPTY = 0
@@ -139,13 +138,7 @@ class Board:
 def simulate_slide(board, start, direction, already_collected=None):
     """
     Slide from `start` in `direction` on the REAL board.
-    `already_collected` lets the DP/DnC simulate without mutating the board.
-
-    Returns:
-        end_pos   : (r, c) where ball stops
-        gems_hit  : frozenset of gem positions collected
-        hit_mine  : bool
-        path      : list[(r,c)] including start
+    Returns: end_pos, gems_hit (frozenset), hit_mine (bool), path (list)
     """
     if already_collected is None:
         already_collected = frozenset()
@@ -178,11 +171,6 @@ def simulate_slide(board, start, direction, already_collected=None):
 # ==================== GREEDY AI ====================
 
 class GreedyAI:
-    """
-    Greedy — pick the move that collects the most gems right now.
-    No lookahead, no subproblem splitting.
-    """
-
     name        = "Greedy"
     description = "Always picks the single move collecting the most gems immediately."
 
@@ -190,7 +178,6 @@ class GreedyAI:
         best_dir  = None
         best_gems = -1
         best_path = []
-
         for d in ALL_DIRECTIONS:
             end, gems, hit_mine, path = simulate_slide(board, ball_pos, d)
             if hit_mine or end == ball_pos:
@@ -199,19 +186,12 @@ class GreedyAI:
                 best_gems = len(gems)
                 best_dir  = d
                 best_path = path
-
         return best_dir, best_path
 
+
+# ==================== DIVIDE & CONQUER AI ====================
+
 class DivideConquerAI:
-    """
-    Pure Divide & Conquer AI.
-
-    Recursively splits the remaining gem set into spatial halves,
-    solves each half independently (base case = slide directly toward
-    the sub-cluster), then combines by choosing the first move that
-    leads to the higher-value half.
-    """
-
     name        = "Divide & Conquer"
     description = (
         "TRUE D&C: recursively splits the gem set into halves, "
@@ -222,56 +202,28 @@ class DivideConquerAI:
         remaining = board.remaining_gems()
         if not remaining:
             return None, []
-
         _, best_dir, best_path = self._dnc(board, ball_pos, remaining)
         if best_dir is None:
             return GreedyAI().choose_move(board, ball_pos)
         return best_dir, best_path
 
-    # ------------------------------------------------------------------
-    # D&C core
-    # ------------------------------------------------------------------
-
     def _dnc(self, board, pos, gem_set):
-        """
-        Divide & Conquer over `gem_set`.
-
-        Returns (best_score, best_direction, best_path)
-        where best_score = number of gems reachable in `gem_set`
-        starting from `pos` using the recommended first move.
-        """
-
-        # ---- BASE CASE: 0 or 1 gem ----
         if len(gem_set) == 0:
             return 0, None, []
-
         if len(gem_set) == 1:
             target = next(iter(gem_set))
             return self._best_move_toward(board, pos, gem_set, target)
-
-        # ---- DIVIDE ----
         left_gems, right_gems = self._split(gem_set)
-
-        # ---- CONQUER each half independently ----
         left_score,  left_dir,  left_path  = self._dnc(board, pos, left_gems)
         right_score, right_dir, right_path = self._dnc(board, pos, right_gems)
-
-        # ---- COMBINE ----
         if left_score >= right_score:
             return left_score, left_dir, left_path
-        else:
-            return right_score, right_dir, right_path
+        return right_score, right_dir, right_path
 
     def _best_move_toward(self, board, pos, gem_set, target):
-        """
-        Base-case solver: from `pos`, find the move that collects the most
-        gems from `gem_set` in a single slide.
-        Returns (score, direction, path).
-        """
         best_score = -1
         best_dir   = None
         best_path  = []
-
         for d in ALL_DIRECTIONS:
             end, gems_hit, hit_mine, path = simulate_slide(board, pos, d)
             if hit_mine or end == pos:
@@ -281,21 +233,15 @@ class DivideConquerAI:
                 best_score = collected
                 best_dir   = d
                 best_path  = path
-
         return max(best_score, 0), best_dir, best_path
 
     @staticmethod
     def _split(gem_set):
-        """
-        Split gem_set into two halves along the axis with greater variance.
-        Returns (left_half, right_half) as frozensets.
-        """
         lst  = list(gem_set)
         rows = [g[0] for g in lst]
         cols = [g[1] for g in lst]
         rv   = max(rows) - min(rows)
         cv   = max(cols) - min(cols)
-
         if rv >= cv:
             med   = sorted(rows)[len(rows) // 2]
             left  = frozenset(g for g in lst if g[0] <= med)
@@ -304,25 +250,19 @@ class DivideConquerAI:
             med   = sorted(cols)[len(cols) // 2]
             left  = frozenset(g for g in lst if g[1] <= med)
             right = frozenset(g for g in lst if g[1] >  med)
-
         if not right:
             return gem_set, frozenset()
         return left, right
 
+
+# ==================== DYNAMIC PROGRAMMING AI ====================
+
 class DPAI:
-    """
-    Pure Dynamic Programming AI.
-
-    Solves dp[(pos, remaining_gems)] = max gems collectable from here,
-    with full memoization and NO arbitrary depth limit.
-    """
-
     name        = "Dynamic Programming"
     description = (
         "TRUE DP: memoizes dp[state]=max_gems over ALL reachable states, "
         "no depth cap, overlapping subproblems reused."
     )
-
     MAX_GEMS_FOR_DP = 12
 
     def __init__(self):
@@ -330,79 +270,173 @@ class DPAI:
 
     def choose_move(self, board, ball_pos):
         remaining = board.remaining_gems()
-
         if len(remaining) > self.MAX_GEMS_FOR_DP:
-            remaining = self._reachable_gems(ball_pos, remaining)
-
+            remaining = self._reachable_gems(board, ball_pos, remaining)
         self._memo = {}
-
         best_score = -1
         best_dir   = None
         best_path  = []
-
         for d in ALL_DIRECTIONS:
             end, gems_hit, hit_mine, path = simulate_slide(board, ball_pos, d)
             if hit_mine or end == ball_pos:
                 continue
-
             collected     = gems_hit & remaining
             new_remaining = remaining - collected
-
             future = self._dp(board, end, new_remaining)
             total  = len(collected) + future
-
             if total > best_score:
                 best_score = total
                 best_dir   = d
                 best_path  = path
-
         if best_dir is None:
             return GreedyAI().choose_move(board, ball_pos)
         return best_dir, best_path
 
     def _dp(self, board, pos, remaining):
-        """
-        dp[(pos, R)] = 0                              if R is empty
-        dp[(pos, R)] = max_d( |collect(d)| + dp[(end_d, R - collect(d))] )
-        """
         if not remaining:
             return 0
-
         state = (pos, remaining)
-
         if state in self._memo:
             return self._memo[state]
-
         best = 0
         for d in ALL_DIRECTIONS:
             end, gems_hit, hit_mine, _ = simulate_slide(board, pos, d)
             if hit_mine or end == pos:
                 continue
-
             collected     = gems_hit & remaining
             new_remaining = remaining - collected
-
             future = self._dp(board, end, new_remaining)
             total  = len(collected) + future
-
             if total > best:
                 best = total
-
         self._memo[state] = best
         return best
 
-    def _reachable_gems(self, pos, all_gems):
-        ranked = sorted(
-            all_gems,
-            key=lambda g: abs(g[0] - pos[0]) + abs(g[1] - pos[1])
-        )
+    def _reachable_gems(self, board, pos, all_gems):
+        ranked = sorted(all_gems,
+                        key=lambda g: abs(g[0] - pos[0]) + abs(g[1] - pos[1]))
         return frozenset(ranked[:self.MAX_GEMS_FOR_DP])
 
-    def memo_stats(self):
-        return {"memo_size": len(self._memo)}
+
+# ==================================================================
+# BACKTRACKING AI — Contribution 1 of 4
+# Author  : Badri Nath
+# Topic   : Problem Representation — State Space & Decision Tree
+# ==================================================================
+#
+# WHAT IS A STATE?
+# ----------------
+# Each node in the backtracking search tree is uniquely identified by:
+#
+#   S = (position, remaining_gems)
+#
+#   • position       : (row, col) tuple — where the ball currently sits
+#   • remaining_gems : frozenset of gem coordinates still on the board
+#
+# Together these two values fully describe everything the algorithm
+# needs to make a decision.  Nothing else matters — move history,
+# path taken, turn number — none of it.
+#
+# DECISION TREE STRUCTURE
+# -----------------------
+# From every state S the ball can attempt up to 8 slides:
+#
+#   S = (pos, gems)
+#    ├─ UP        → new state S1
+#    ├─ DOWN      → new state S2
+#    ├─ LEFT      → new state S3
+#    ├─ RIGHT     → new state S4
+#    ├─ UP-LEFT   → new state S5
+#    ├─ UP-RIGHT  → new state S6
+#    ├─ DOWN-LEFT → new state S7
+#    └─ DOWN-RIGHT→ new state S8
+#
+# Each child state has its own 8 children, and so on.
+#
+# BRANCHING FACTOR & EXPONENTIAL GROWTH
+# --------------------------------------
+# Branching factor  b = 8  (8 directions)
+# Search depth      d = MAX_DEPTH
+#
+# Worst-case nodes  = b^d = 8^d
+#
+#   depth 1 →        8 nodes
+#   depth 3 →      512 nodes
+#   depth 5 →   32 768 nodes
+#   depth 6 →  262 144 nodes
+#
+# This is WHY backtracking + pruning is essential — without it the
+# naive tree grows too large to evaluate in real time.
+#
+# BacktrackState encapsulates the state definition cleanly so that
+# the rest of the algorithm (Dhiraj, Nikhil, Sukanth) can reference
+# a single well-defined object instead of loose tuples.
+
+class BacktrackState:
+    """
+    Badri Nath — State Space Representation
+    ========================================
+    Represents one node in the backtracking search tree.
+
+    Attributes
+    ----------
+    position  : (row, col) — current ball position
+    remaining : frozenset  — gem coordinates still uncollected
+    depth     : int        — how deep this node sits in the tree
+                             (0 = root / starting state)
+
+    This is the canonical state definition S = (position, remaining_gems).
+    Because `remaining` is a frozenset (immutable), child states are
+    created by subtraction without modifying the parent — the call stack
+    itself acts as the undo mechanism during backtracking.
+    """
+
+    # Maximum look-ahead depth for the search tree
+    MAX_DEPTH = 6
+
+    def __init__(self, position, remaining, depth=0):
+        self.position  = position   # (row, col)
+        self.remaining = remaining  # frozenset of gem coords
+        self.depth     = depth      # tree depth (0 = root)
+
+    # ------------------------------------------------------------------
+    # State properties used by the rest of the algorithm
+    # ------------------------------------------------------------------
+
+    def is_terminal(self):
+        """
+        A state is terminal when:
+          (a) no gems remain to collect, OR
+          (b) we have reached the maximum search depth
+        In both cases further recursion is pointless.
+        """
+        return (not self.remaining) or (self.depth >= self.MAX_DEPTH)
+
+    def child(self, new_position, gems_collected):
+        """
+        Create a child state after making one move.
+        The parent's `remaining` is unchanged (frozenset subtraction
+        returns a NEW frozenset) — this is the implicit backtrack step.
+
+        Parameters
+        ----------
+        new_position    : (row, col) where the ball stops
+        gems_collected  : frozenset of gems picked up on this slide
+        """
+        return BacktrackState(
+            position  = new_position,
+            remaining = self.remaining - gems_collected,
+            depth     = self.depth + 1,
+        )
+
+    def __repr__(self):
+        return (f"BacktrackState(pos={self.position}, "
+                f"gems_left={len(self.remaining)}, depth={self.depth})")
 
 
 # ==================== AI REGISTRY ====================
+# BacktrackAI will be added by Sukanth (Commit 4).
+# Placeholder keeps the registry valid after each commit.
 
 AI_ALGORITHMS = {
     "Greedy":              GreedyAI,
@@ -416,12 +450,6 @@ AI_NAMES = list(AI_ALGORITHMS.keys())
 # ==================== GAME STATE ====================
 
 class GameState:
-    """
-    Manages one full game session.
-    Tracks board, positions, scores and exposes clean methods
-    for both human and CPU play.
-    """
-
     def __init__(self, map_name, ai_name="Greedy"):
         self.map_name = map_name
         self.ai_name  = ai_name
@@ -430,16 +458,13 @@ class GameState:
     def _build(self):
         self.board     = Board(self.map_name)
         self.ball_pos  = self.board.start
-
         self.human_score = 0
         self.cpu_score   = 0
         self.human_moves = 0
         self.cpu_moves   = 0
-
         self.game_over        = False
         self.human_eliminated = False
         self.cpu_eliminated   = False
-
         ai_cls  = AI_ALGORITHMS.get(self.ai_name, GreedyAI)
         self.ai = ai_cls()
 
@@ -455,68 +480,50 @@ class GameState:
         ai_cls  = AI_ALGORITHMS.get(ai_name, GreedyAI)
         self.ai = ai_cls()
 
-    # ---- human move ----
-
     def human_move(self, direction):
         if self.game_over:
             return False, [], False
-
         end, gems, hit_mine, path = simulate_slide(self.board, self.ball_pos, direction)
-
         if hit_mine:
             self.ball_pos         = end
             self.human_eliminated = True
             self.game_over        = True
             return False, path, True
-
         if end == self.ball_pos:
             return False, [], False
-
         self.ball_pos = end
         self.human_moves += 1
         for r, c in path[1:]:
             if self.board.cell(r, c) == GEM:
                 self.board.remove_gem(r, c)
                 self.human_score += 1
-
         self._check_done()
         return True, path, False
-
-    # ---- cpu move ----
 
     def cpu_move(self):
         if self.game_over:
             return False, [], False
-
         direction, _ = self.ai.choose_move(self.board, self.ball_pos)
-
         if direction is None:
             self.game_over = True
             return False, [], False
-
         end, gems, hit_mine, path = simulate_slide(self.board, self.ball_pos, direction)
-
         if hit_mine:
             self.ball_pos       = end
             self.cpu_eliminated = True
             self.game_over      = True
             return False, path, True
-
         if end == self.ball_pos:
             self.game_over = True
             return False, [], False
-
         self.ball_pos = end
         self.cpu_moves += 1
         for r, c in path[1:]:
             if self.board.cell(r, c) == GEM:
                 self.board.remove_gem(r, c)
                 self.cpu_score += 1
-
         self._check_done()
         return True, path, False
-
-    # ---- helpers ----
 
     def _check_done(self):
         if self.human_score + self.cpu_score >= self.board.total_gems():
