@@ -94,8 +94,6 @@ MAP_NAMES = list(MAPS.keys())
 # ==================== BOARD ====================
 
 class Board:
-    """Holds the grid and all tile lookups."""
-
     def __init__(self, map_name):
         self.map_name = map_name
         data          = MAPS[map_name]
@@ -103,7 +101,6 @@ class Board:
         self.cols     = data["cols"]
         self.start    = data["start"]
         self.grid     = [[EMPTY] * self.cols for _ in range(self.rows)]
-
         for r, c in data["gems"]:
             self.grid[r][c] = GEM
         for r, c in data["mines"]:
@@ -313,44 +310,23 @@ class DPAI:
 
 # ==================================================================
 # BACKTRACKING AI — Contribution 1 of 4
-# Author  : Badri Nath
-# Topic   : Problem Representation — State Space & Decision Tree
+# Author  : Badri Nath — State Space & Decision Tree
 # ==================================================================
 
 class BacktrackState:
-    """
-    Badri Nath — State Space Representation
-    ========================================
-    One node in the backtracking search tree.
-      S = (position, remaining_gems)
-
-    Decision tree (branching factor b = 8):
-      S
-       ├─ UP         → S1
-       ├─ DOWN       → S2
-       ├─ LEFT       → S3
-       ├─ RIGHT      → S4
-       ├─ UP-LEFT    → S5
-       ├─ UP-RIGHT   → S6
-       ├─ DOWN-LEFT  → S7
-       └─ DOWN-RIGHT → S8
-
-    Worst-case nodes = b^d = 8^d (exponential growth).
-    """
+    """S = (position, remaining_gems) — one node in the search tree."""
 
     MAX_DEPTH = 6
 
     def __init__(self, position, remaining, depth=0):
         self.position  = position
-        self.remaining = remaining  # frozenset — immutable, enables implicit backtrack
+        self.remaining = remaining
         self.depth     = depth
 
     def is_terminal(self):
-        """No gems left OR depth cap reached."""
         return (not self.remaining) or (self.depth >= self.MAX_DEPTH)
 
     def child(self, new_position, gems_collected):
-        """Return a NEW child state (parent is unchanged — backtrack is free)."""
         return BacktrackState(
             position  = new_position,
             remaining = self.remaining - gems_collected,
@@ -364,104 +340,28 @@ class BacktrackState:
 
 # ==================================================================
 # BACKTRACKING AI — Contribution 2 of 4
-# Author  : Dhiraj
-# Topic   : Move Generation — the "Choose" Step
+# Author  : Dhiraj — Move Generation
 # ==================================================================
-#
-# HOW MOVES ARE GENERATED
-# -------------------------
-# From any state S the algorithm iterates over ALL_DIRECTIONS and
-# calls simulate_slide() for each.  This is the "expand" step in the
-# search tree — it produces the children of the current node.
-#
-# for direction in ALL_DIRECTIONS:        ← try all 8 directions
-#     end, gems_hit, hit_mine, path =
-#         simulate_slide(board, pos, direction)
-#
-# SLIDING MOVEMENT (inertia rule)
-# --------------------------------
-# The ball does NOT move one cell — it slides until it hits:
-#   • a wall (edge of grid)       → stops before going out of bounds
-#   • a STOP cell                 → stops ON the stop cell
-#   • a MINE cell                 → eliminated (invalid move)
-# Gems along the path are collected automatically.
-#
-# PATH GENERATION
-# ---------------
-# simulate_slide returns the full path list [(r0,c0), (r1,c1), …].
-# The path is used both for scoring (how many gems?) and for the
-# GUI animation.
-#
-# INVALID MOVE DETECTION (pruning mines early)
-# ---------------------------------------------
-# A move is discarded immediately if:
-#   hit_mine == True  → would kill the ball
-#   end == pos        → ball did not move (wall directly adjacent)
-#
-# This is the first layer of pruning — done BEFORE any recursion.
 
 class BacktrackMoveGen:
-    """
-    Dhiraj — Move Generation
-    =========================
-    Generates and filters valid candidate moves from a given state.
-    Provides the raw (direction, end, collected, path) tuples that
-    the recursive engine (Nikhil) and backtracking loop (Sukanth) consume.
-    """
+    """Dhiraj — expands a state into all valid (direction, end, collected, path) tuples."""
 
     @staticmethod
     def generate_moves(board, state):
-        """
-        Expand the current state into all valid child moves.
-
-        Returns a list of tuples:
-            (direction, end_position, gems_collected, slide_path)
-
-        Moves that hit a mine or leave the ball stationary are
-        silently discarded — they are never added to the list.
-
-        Parameters
-        ----------
-        board : Board  — the live game board
-        state : BacktrackState — the node being expanded
-        """
         moves = []
-
-        # ---- Decision expansion step ---------------------------------
-        # Try every direction: this is the branching factor b = 8.
         for direction in ALL_DIRECTIONS:
-
             end, gems_hit, hit_mine, path = simulate_slide(
                 board, state.position, direction
             )
-
-            # ---- Prune mines and no-op moves immediately -------------
-            if hit_mine:
-                continue          # mine → illegal, discard
-            if end == state.position:
-                continue          # wall directly adjacent → no movement
-
-            # Only count gems that are still on the board
+            if hit_mine or end == state.position:
+                continue
             collected = gems_hit & state.remaining
-
             moves.append((direction, end, collected, path))
-
         return moves
 
     @staticmethod
     def score_move(end_pos, collected, remaining_after):
-        """
-        Quick heuristic score for move ordering.
-        Tries best moves first so the recursive engine finds good
-        solutions early, allowing alpha pruning to cut more branches.
-
-        Score = (gems collected now) * 10
-              + (gems within 3-step Manhattan reach from landing) * 3
-              - (min distance to nearest remaining gem) * 1
-        """
         immediate = len(collected) * 10
-
-        # Proximity bonus: reward landing near leftover gems
         if remaining_after:
             min_dist = min(
                 abs(end_pos[0] - g[0]) + abs(end_pos[1] - g[1])
@@ -469,8 +369,137 @@ class BacktrackMoveGen:
             )
         else:
             min_dist = 0
-
         return immediate - min_dist
+
+
+# ==================================================================
+# BACKTRACKING AI — Contribution 3 of 4
+# Author  : Nikhil
+# Topic   : Recursive Exploration — Depth-Limited Search Engine
+# ==================================================================
+#
+# THE RECURSIVE STRUCTURE
+# ------------------------
+# solve(state, depth)  is the heart of the algorithm.
+#
+#   solve(state, depth):
+#       if terminal:
+#           return 0
+#       for each move in generate_moves(state):
+#           child_state = state.child(move)     ← go deeper
+#           future = solve(child_state, depth-1) ← RECURSIVE CALL
+#           score  = gems_now + future
+#           track best score
+#       return best score
+#
+# SEARCH TREE EXAMPLE
+# --------------------
+#   State S  (depth 0)
+#    ├─ Move A  → State SA  (depth 1)
+#    │    ├─ Move A1 → State SA1  (depth 2) → base case returns 0
+#    │    └─ Move A2 → State SA2  (depth 2) → base case returns 1
+#    │         score(A) = gems(A) + max(0, 1) = gems(A) + 1
+#    └─ Move B  → State SB  (depth 1)
+#         ├─ Move B1 → State SB1  (depth 2) → returns 2
+#         └─ Move B2 → State SB2  (depth 2) → returns 0
+#              score(B) = gems(B) + max(2, 0) = gems(B) + 2
+#
+#   best at root = max(score(A), score(B))
+#
+# DEPTH-LIMITED SEARCH
+# ---------------------
+# Without a depth cap the recursion could run forever in cyclic grids.
+# BacktrackState.MAX_DEPTH = 6 caps it.  Adaptive depth (Sukanth's
+# contribution) relaxes this cap to MAX_DEPTH=∞ when ≤4 gems remain.
+#
+# WHY EVALUATE FUTURE OUTCOMES?
+# --------------------------------
+# A greedy algorithm only asks: "which move scores most NOW?"
+# The recursive engine asks:    "which move leads to the most gems
+#                                across ALL future moves within depth?"
+# This is the key difference that makes backtracking strategic.
+
+class BacktrackSearchEngine:
+    """
+    Nikhil — Recursive Search Engine
+    ==================================
+    Explores the search tree depth-first, evaluating future outcomes
+    at each node by recursing into child states.
+
+    Uses BacktrackState (Badri Nath) to represent nodes and
+    BacktrackMoveGen (Dhiraj) to expand them.
+
+    Returns the best total gem score reachable from a given state,
+    plus the first move and path leading to that score.
+    """
+
+    def recurse(self, board, state):
+        """
+        Depth-limited recursive search from `state`.
+
+        Pattern:
+            explore move
+            ↓
+            recurse deeper          (go down the tree)
+            ↓
+            score = now + future    (evaluate on the way back UP)
+            ↓
+            track best              (compare branches)
+
+        Returns
+        -------
+        (best_score, best_direction, best_path)
+        """
+
+        # ---- Base case: terminal state --------------------------------
+        # No gems left OR depth cap reached — nothing more to collect.
+        if state.is_terminal():
+            return 0, None, []
+
+        # ---- Generate and order moves (Dhiraj's layer) ----------------
+        raw_moves = BacktrackMoveGen.generate_moves(board, state)
+
+        if not raw_moves:
+            return 0, None, []   # no legal moves from this position
+
+        # Order moves best-first using the heuristic score
+        # so good branches are found early (enables better pruning later)
+        ordered = sorted(
+            raw_moves,
+            key=lambda m: BacktrackMoveGen.score_move(
+                m[1], m[2], state.remaining - m[2]
+            ),
+            reverse=True,
+        )
+
+        # ---- Recursive exploration ------------------------------------
+        best_score = -1
+        best_dir   = None
+        best_path  = []
+
+        for direction, end, collected, path in ordered:
+
+            # Build the child state (Badri Nath's BacktrackState.child)
+            # This is the "explore deeper" step — descend one level
+            child_state = state.child(end, collected)
+
+            # Recursive call — evaluate all moves from the child state
+            future_score, _, _ = self.recurse(board, child_state)
+
+            # Calculate total gems reachable via this branch
+            total = len(collected) + future_score
+
+            # Track the best branch seen so far
+            if total > best_score:
+                best_score = total
+                best_dir   = direction
+                best_path  = path
+
+            # Early exit: perfect solution found — stop searching
+            if best_score == len(state.remaining):
+                break
+
+        return best_score, best_dir, best_path
 
 
 # ==================== AI REGISTRY ====================
