@@ -20,7 +20,7 @@ from inertia_core import (
     GameState,
 )
 
-# ==================== VESPER PALETTE ====================
+
 
 V = {
     "bg":          "#1e1e2e",
